@@ -43,8 +43,9 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
     DESC: This is the main labs loading function, for loading labs data from an RPDR data pull, and processing lab results. 
      Does MANY THINGS. 
      1. Homogenizes column names:
-         rename result_col to 'Result' if not already named result
+         rename result_col to 'result' if not already named result
          rename datetime_col to 'datetime' if not already named so; convert this to pd.DateTime format
+         rename test_col to 'test_desc'
     path: path to labs file (in .csv or other text delimited file)
     path_synonyms: path to synonyms file (.csv). structure of synonyms file: first row is what you want to call each lab 
      defined in the test_col column; remainder of rows identify the exact text of labs that should be considered equivalent. 
@@ -160,7 +161,7 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
     lfts.loc[fil, 'result'] = pd.to_numeric(lfts.loc[fil, 'result'], errors='coerce')
     # hold on to removed rows -- error checking
     removed_rows=lfts[(fil) & lfts.result.isnull()].copy()
-    # remove these reows
+    # remove these rows
     lfts.drop(lfts[(fil) & lfts.result.isnull()].index, inplace=True)
     
     
@@ -214,35 +215,51 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
                 elif 'ANA SCREEN POSITIVE, TITRE PERFORMED' in row.result or 'POSITIVE - SEE TITER' in row.result:
                     # this category will get removed; there's always a titer separately reported at same time point
                     return 'see titer'
+                
+                    
                 ## FIRST IDENTIFY POSITIVELY OR NEGATIVELY IDENTIFIED EXAMPLES
                 elif 'negative' in row.result.lower() and not 'positive' in row.result.lower():
                     return 0
                 elif 'positive' in row.result.lower() and not 'negative' in row.result.lower():
+                    
                     if len(numbers) == 1:
                         return numbers[0]
                     elif len(numbers) == 2 and numbers[0]==1:
                         return numbers[1]
+                    
+                    ## Mod 1 begin ##
+                    ## Failing at cases: Positive at 1:40 and 1:160 in result
+                    elif len(numbers) == 4 and numbers[2]==1:
+                        return numbers[3]
+                    ## Mod 1 end ##
+                    
                     else: 
                         result_text=row.Result_Text
                         if isinstance(result_text,str):
-                            numbers=all_numbers_within_n_chars_of_word(result_text, 'positive', n=26)
-                            if len(numbers) == 1:
-                                return numbers[0]
-                            elif len(numbers) == 2 and numbers[0]==1:
-                                return numbers[1]
-                            elif len(numbers) > 2:
-                                this_string=row.Result_Text.lower()
-                                if isinstance(this_string,str):
-                                    idx_titer=this_string.find('titer')
-                                    if len(row.Result_Text[idx_titer:]) <= 17:
-                                        search_text=row.Result_Text[idx_titer:]
-                                    else:
-                                        search_text=row.Result_Text[idx_titer:idx_titer+17]
-                                    numbers=find_all_num_in_string(search_text)
-                                    if len(numbers) == 1:
-                                        return numbers[0]
-                                    elif len(numbers) == 2 and numbers[0]==1:
-                                        return numbers[1]
+                            ## Mod 2 begin ##
+                            ## Some cases doenst contain the word 'positive' in Result_text which is generating a random incorrect result
+                            if 'positive' in result_text.lower():
+                                numbers=all_numbers_within_n_chars_of_word(result_text, 'positive', n=26)
+                                if len(numbers) == 1:
+                                    return numbers[0]
+                                elif len(numbers) == 2 and numbers[0]==1:
+                                    return numbers[1]
+                                elif len(numbers) > 2:
+                                    this_string=row.Result_Text.lower()
+                                    if isinstance(this_string,str):
+                                        idx_titer=this_string.find('titer')
+                                        if len(row.Result_Text[idx_titer:]) <= 17:
+                                            search_text=row.Result_Text[idx_titer:]
+                                        else:
+                                            search_text=row.Result_Text[idx_titer:idx_titer+17]
+                                        numbers=find_all_num_in_string(search_text)
+                                        if len(numbers) == 1:
+                                            return numbers[0]
+                                        elif len(numbers) == 2 and numbers[0]==1:
+                                            return numbers[1]
+                            else:
+                                return 20
+                            ## Mod 2 end ##
 
                 elif 'positive' in row.result.lower() and 'negative' in row.result.lower():
                     # both pos and neg present; find the text following the 'positive' word (26 chars)
@@ -274,22 +291,23 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
                 if 'negative' in this_string.lower() and not 'positive' in this_string.lower():
                     return 0
                 elif 'positive' in this_string.lower() and not 'negative' in this_string.lower():
-                    # first check if this common string is present, the number immediately following this text is likely the titer
-                    if 'positive at 1:' in this_string.lower():
-                        return re.findall('positive at 1:(\d+)', this_string.lower())[0]
-                    else:
-                        numbers=all_numbers_within_n_chars_of_word(this_string, 'positive', n=26)
-                        if len(numbers) == 1:
-                            return numbers[0]
-                        elif len(numbers) == 2 and numbers[0]==1:
-                            return numbers[1]
-                        elif len(numbers) == 4:
-                            return max(numbers)
-                        elif len(numbers)>0:
-                            max_num = max(numbers)
-                            print('positive only in result text but neither 1 nor 2 numbers, going on limb and taking : ' + str(max_num))
-                            print(this_string)
-                            return max_num
+                    ## Mod 3 begin ##
+                    ## Positive at logic is not working when there are 4 numbers. Removed the if statement
+                    ## Example: Positive at 1:40 and 1:160 (endpoint)
+                    ## Finding all numbers within a close proximity of 'positive' seems to be working for all cases
+                    numbers=all_numbers_within_n_chars_of_word(this_string, 'positive', n=26)
+                    if len(numbers) == 1:
+                        return numbers[0]
+                    elif len(numbers) == 2 and numbers[0]==1:
+                        return numbers[1]
+                    elif len(numbers) == 4 and numbers[2]==1:
+                        return numbers[3]
+                    elif len(numbers)>0:
+                        max_num = max(numbers)
+                        print('positive only in result text but neither 1 nor 2 numbers, going on limb and taking : ' + str(max_num))
+                        print(this_string)
+                        return max_num
+                    ## Mod 3 end ##
                 elif 'positive' in this_string.lower() and 'negative' in this_string.lower():
                     # both pos and neg present; find the text following the 'positive' word (15 chars)
                     index_positive=this_string.lower().find('positive')
@@ -366,17 +384,6 @@ def load_meds(path, delimiter='|', datetime_col='Medication_Date', prune=True):
     meds['datetime'] = pd.to_datetime(meds.loc[:,datetime_col])
     
     return meds[['EMPI', 'EPIC_PMRN', 'MRN_Type', 'MRN', 'datetime', 'Medication', 'Code_Type', 'Code', 'Quantity', 'Inpatient_Outpatient']]
-
-def load_diag(path, delimiter='|', datetime_col='Date', prune=True):
-    import pandas as pd
-    
-    diag = pd.read_csv(path, delimiter=delimiter, dtype=str)
-    
-    diag['Diagnosis_Name'] = diag['Diagnosis_Name'].str.lower()
-    
-    diag['datetime'] = pd.to_datetime(diag.loc[:,datetime_col])
-    
-    return diag
 
 def get_table_traj(table,empi):
     filter_pt = (table.EMPI == empi)
