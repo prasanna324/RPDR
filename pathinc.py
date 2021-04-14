@@ -1,6 +1,40 @@
 
-def load_RPDR_path(path,delimiter='\t', datetime_col='Report_Date_Time'):
-    ''' load_RPDR_path(path,delimiter='\t', datetime_col='Report_Date_Time')
+def load_RPDR_path_multiple(dir_data, fname, delimiter='|', datetime_col='Report_Date_Time'):
+    ''' load_RPDR_path_multiple(dir_data, fname, delimiter='\t', datetime_col='Report_Date_Time'):
+        Sequentially loads all files from RPDR data dump when output is split. 
+        
+        1. Starts in dir_data (should have trailing slash), grabs all sub-folders' names automatically, then sequentially loads: dir_data/[sub-folders]/fname (where fname is the name of the file)
+        * Note for whatever reason, on a multiple-split file dump from RPDR the labs, demographics, etc files are all named the exact same, just in different zips
+        2. Calls the traditional load path function on each file
+        3. Concatenates all results and returns 1 DF
+        
+        See load_native_data for remainder of parameters which are passed to that function
+        
+        '''
+    import os
+    import pandas as pd
+    
+    # get list of subdirectories
+    subdirectories = [x[0] for x in os.walk(dir_data)][1:]
+    
+    first=True
+    # for each subdir, use the traditional load function to load data and concat
+    for subdir in subdirectories:
+        path_to_path=subdir+'/'+fname
+        path = load_RPDR_path(path=path_to_path,
+                              delimiter=delimiter,
+                              datetime_col=datetime_col)
+        
+        if first==True:
+            concat_pd = path
+            first=False
+        else:
+            concat_pd=pd.concat([concat_pd, path],ignore_index=True)
+    
+    return concat_pd
+
+def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
+    ''' load_RPDR_path(path,string_format=False,delimiter='|', datetime_col='Report_Date_Time')
     DESC: loads an RPDR pathology file to pandas 
     1. removes deleted, canceled and in process path reports
     2. removes duplicate path reports, keeping the first entry
@@ -13,25 +47,78 @@ def load_RPDR_path(path,delimiter='\t', datetime_col='Report_Date_Time'):
     datetime_col: column name containing date/time information for each path report
     
     returns: pandas dataframe containing path information
-    - 
-    '''# FYIs:
-    # - removes everything but MGH for now
-    import pandas as pd
     
+    WARNINGS:
+    1. Current function automatically searches for path + 'multiline_corrected', *if present* it assumes that is the correct 
+        file. E.g., path='/data/path.txt', it searches for '/data/path_multiline_corrected.txt'.
+    2. It will not overwrite this file if present
+    
+    TO-DO:
+    1. Update path report selection when there are near-duplicates. These are almost always of the form 'Final' and 'Updated', 
+        of which, when duplicated, we should take the 'Updated' report. I have looked at about 10 examples so far (Marc)
+    '''
+    import pandas as pd
+    import os.path
+    from os import path as os_path
+    
+    ## Mod 1 begins ##
+    ## default Report_Text format is multi-line. If string_format==True, convert multi-line text by double-quoting all quotes
+    ##  (which allows read_csv to read through by default), and enclosing full report in single-quotes
+    write_path = path.replace('.','_multiline_corrected.')
+    if os_path.exists(write_path)==False:
+        print('Reformatting path file to allow multi-line report text to be readable, saving as : {}'.format(write_path))
+        f = open(path,'r')
+        filedata = f.read()
+        f.close()
+        newdata = filedata.replace('"', '""')
+        newdata = newdata.replace('Accession Number:', '"Accession Number:')
+        newdata = newdata.replace('[report_end]', '[report_end]"')
+        f2 = open(write_path,'w')
+        f2.write(newdata)
+        f2.close()
+        
+        path=write_path
+        
+    ## Mod 1 ends ##
+    
+    print('Reading from : ' + path)
     path_df = pd.read_csv(path, sep=delimiter, dtype=str)
     
+    # unique_identifier. Requires some explanation.. report_number SHOULD be unique (it is literally the accession
+    #  number for finding a block of tissue), however it is NOT in some specific examples of NSMC and MGH. E.g., 
+    #  in all_RPDR_path, report numbers  : 
+    # 'S11-5510', 'S14-3070', 'S17-25856', 'S13-2400', 'S14-9841', 'S13-3071',
+    #    'S12-6506', 'S14-218', 'S12-3414', 'S13-32', 'S13-6114', 'S12-2481',
+    #    'S13-1077', 'S14-41', 'S13-8207', 'S12-10612', 'S12-5964', 'S10-9798',
+    #    'S09-10295', 'S16-15842', 'S14-8374', 'S12-3350', 'S12-6495', 'S14-785',
+    #    'S16-183'
+    #  all give duplicates for NSMC & MGH. And they're *different* patients, totally diff reports
+    #  solution: append EMPI (unique per patient) to report_number to screen out these cases, operate on this concatenated report id
+    path_df['unique_report_id'] = path_df.apply(lambda x: str(x.EMPI) + '_' + str(x.Report_Number),axis=1)
+    
     # remove deleted, cancelled, and in-process path reports
-    bad_reports = (path_df.Report_Status == 'Deleted') | (path_df.Report_Status == 'Cancelled') | (path_df.Report_Status == 'In Process')
+#     bad_reports = (path_df.Report_Status == 'Deleted') | (path_df.Report_Status == 'Cancelled') | (path_df.Report_Status == 'In Process') | (path_df.Report_Status == 'Preliminary') | (path_df.Report_Status == 'Hold')  | (path_df.Report_Status == 'Pending')
+    bad_statuses=['Deleted', 'Cancelled', 'In Process', 'Preliminary', 'Hold', 'Pending','Unknown','In Revision']
+    bad_reports = path_df.Report_Status.isin(bad_statuses)
     
     # drop rows with any of these features
     path_df2 = path_df[~bad_reports].copy()
     
     # re-index to 'Report_Number', dropping duplicates ONLY if duplicate on both report_number and Report_Text
     # (ie, there is a problem if they're not the same..)
-    path_df2.drop_duplicates(subset=['Report_Number','Report_Text'], keep='first', inplace=True, ignore_index=False)
+    path_df2.drop_duplicates(subset=['unique_report_id','Report_Text'], keep='first', inplace=True, ignore_index=False)
+    
+    # print duplicated entries and delete 
+    dup_entries=path_df2.duplicated(subset='unique_report_id', keep=False)
+    print('Duplicated entries (will keep first only, please review):')
+    print(path_df2[dup_entries].Report_Text)
+    
+    # drop these. Why twice? Because if the report text is identical, don't need to review. But these are non-identical duplicates,
+    #  usually, these are path reports that were revised/updated
+    path_df2.drop_duplicates(subset=['unique_report_id'], keep='first', inplace=True, ignore_index=False)
     
     # now set index to Report_Number
-    path_df2.set_index(keys='Report_Number', inplace=True, verify_integrity=True)
+    path_df2.set_index(keys='unique_report_id', inplace=True, verify_integrity=True)
     
     # set date time as datetime
     path_df2['datetime'] = pd.to_datetime(path_df2.loc[:,datetime_col])
