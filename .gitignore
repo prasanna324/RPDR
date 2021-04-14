@@ -1,2 +1,6 @@
 Analysis_AIH.ipynb
 Test.ipynb
+.DS_Store
+.ipynb_checkpoints/
+logs/
+__pycache__/
