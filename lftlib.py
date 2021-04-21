@@ -55,11 +55,13 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
     test_col: name of the column that contains the name of the lab test (this is what synonyms acts upon)
     delim: delimiter of the labs file (the file pointed to by path)
     clean_columns: bool. If true, removes all columns except those named the following:
-     [['EMPI', 'test_desc', 'datetime', 'result', 'MRN_Type', 'MRN', 'Test_Description', 'Result_Text', 'above_below_assay_limit']]
+     [['EMPI', 'test_desc', 'datetime', 'result_orig', 'result', 'MRN_Type', 'MRN', 'Test_Description', 'Result_Text', 'above_below_assay_limit']]
     
     RETURNS: lfts, discarded_rows
      lfts is the labs as panda database (should really be named labs, but initially developed for only liver function tests (LFTs))
      discarded_rows is a second pandas database containing anything removed by the processing
+     
+    Note: input result column will be returned as 'result_orig' and the processed result column will be returned as 'result'
     '''
     # read data
     # 
@@ -70,12 +72,21 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
     # read the data
     print('Loading data from ' + path)
     lfts = pd.read_csv(path,delimiter=delim)
-    # convert datetime column to datetime format
-    if result_col != 'result':
-        lfts['result'] = lfts.loc[:,result_col]
+    
+#     if result_col != 'result':
+#         lfts['result'] = lfts.loc[:,result_col]
+#     else:
+#         # result col is already named result. rename it
+#         lfts['result_orig'] = lfts['result']
+
+    ## Mod 1 ##
+    if result_col in lfts.columns:
+        lfts.rename(columns={result_col: 'result_orig'}, inplace=True)
+        lfts['result'] = lfts.loc[:,'result_orig']
     else:
-        # result col is already named result. rename it
-        lfts['result_orig'] = lfts['result']
+        raise ValueError('Incorrect name specified for result column')
+    ## Mod 1 ##
+    
     # convert datetime column to datetime format
     if datetime_col != 'datetime':
         lfts['datetime'] = pd.to_datetime(lfts.loc[:,datetime_col])
@@ -227,16 +238,13 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
                     elif len(numbers) == 2 and numbers[0]==1:
                         return numbers[1]
                     
-                    ## Mod 1 begin ##
-                    ## Failing at cases: Positive at 1:40 and 1:160 in result
                     elif len(numbers) == 4 and numbers[2]==1:
                         return numbers[3]
-                    ## Mod 1 end ##
                     
                     else: 
                         result_text=row.Result_Text
                         if isinstance(result_text,str):
-                            ## Mod 2 begin ##
+                            
                             ## Some cases doenst contain the word 'positive' in Result_text which is generating a random incorrect result
                             if 'positive' in result_text.lower():
                                 numbers=all_numbers_within_n_chars_of_word(result_text, 'positive', n=26)
@@ -259,7 +267,6 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
                                             return numbers[1]
                             else:
                                 return 20
-                            ## Mod 2 end ##
 
                 elif 'positive' in row.result.lower() and 'negative' in row.result.lower():
                     # both pos and neg present; find the text following the 'positive' word (26 chars)
@@ -291,7 +298,6 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
                 if 'negative' in this_string.lower() and not 'positive' in this_string.lower():
                     return 0
                 elif 'positive' in this_string.lower() and not 'negative' in this_string.lower():
-                    ## Mod 3 begin ##
                     ## Positive at logic is not working when there are 4 numbers. Removed the if statement
                     ## Example: Positive at 1:40 and 1:160 (endpoint)
                     ## Finding all numbers within a close proximity of 'positive' seems to be working for all cases
@@ -307,7 +313,7 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
                         print('positive only in result text but neither 1 nor 2 numbers, going on limb and taking : ' + str(max_num))
                         print(this_string)
                         return max_num
-                    ## Mod 3 end ##
+                    
                 elif 'positive' in this_string.lower() and 'negative' in this_string.lower():
                     # both pos and neg present; find the text following the 'positive' word (15 chars)
                     index_positive=this_string.lower().find('positive')
@@ -353,7 +359,7 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
     # REMOVE UNUSED/DISTRACTING/PRECURSOR COLUMNS
     if clean_columns:
         # easier to define as what we want to keep
-        lfts = lfts[['EMPI', 'test_desc', 'datetime', 'result', 'MRN_Type', 'MRN', 'Test_Description', 'Result_Text', 'above_below_assay_limit']].copy()
+        lfts = lfts[['EMPI', 'test_desc', 'datetime', 'result_orig', 'result', 'MRN_Type', 'MRN', 'Test_Description', 'Result_Text', 'above_below_assay_limit']].copy()
         
 #     from IPython import embed; embed()
         

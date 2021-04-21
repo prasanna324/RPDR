@@ -61,7 +61,6 @@ def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
     import os.path
     from os import path as os_path
     
-    ## Mod 1 begins ##
     ## default Report_Text format is multi-line. If string_format==True, convert multi-line text by double-quoting all quotes
     ##  (which allows read_csv to read through by default), and enclosing full report in single-quotes
     write_path = path.replace('.','_multiline_corrected.')
@@ -71,15 +70,16 @@ def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
         filedata = f.read()
         f.close()
         newdata = filedata.replace('"', '""')
-        newdata = newdata.replace('Accession Number:', '"Accession Number:')
+        ## Mod 1 ##
+        # Replacing Accession number with PAT to deal with Report_Text's that doesn't contain the word "Accession number"
+        newdata = newdata.replace('|PAT|', '|PAT|"')
+        ## Mod 1 ##
         newdata = newdata.replace('[report_end]', '[report_end]"')
         f2 = open(write_path,'w')
         f2.write(newdata)
         f2.close()
         
-        path=write_path
-        
-    ## Mod 1 ends ##
+    path = write_path
     
     print('Reading from : ' + path)
     path_df = pd.read_csv(path, sep=delimiter, dtype=str)
@@ -97,25 +97,24 @@ def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
     path_df['unique_report_id'] = path_df.apply(lambda x: str(x.EMPI) + '_' + str(x.Report_Number),axis=1)
     
     # remove deleted, cancelled, and in-process path reports
-#     bad_reports = (path_df.Report_Status == 'Deleted') | (path_df.Report_Status == 'Cancelled') | (path_df.Report_Status == 'In Process') | (path_df.Report_Status == 'Preliminary') | (path_df.Report_Status == 'Hold')  | (path_df.Report_Status == 'Pending')
+    # bad_reports = (path_df.Report_Status == 'Deleted') | (path_df.Report_Status == 'Cancelled') | (path_df.Report_Status == 'In Process') | (path_df.Report_Status == 'Preliminary') | (path_df.Report_Status == 'Hold')  | (path_df.Report_Status == 'Pending')
     bad_statuses=['Deleted', 'Cancelled', 'In Process', 'Preliminary', 'Hold', 'Pending','Unknown','In Revision']
     bad_reports = path_df.Report_Status.isin(bad_statuses)
     
     # drop rows with any of these features
     path_df2 = path_df[~bad_reports].copy()
     
-    # re-index to 'Report_Number', dropping duplicates ONLY if duplicate on both report_number and Report_Text
-    # (ie, there is a problem if they're not the same..)
-    path_df2.drop_duplicates(subset=['unique_report_id','Report_Text'], keep='first', inplace=True, ignore_index=False)
+    ## Mod 2 ##
+    # Drop duplicates for 'unique_report_id' cases based on length of Result_Text instead of dropping the first observed case
+    path_df2['report_len'] = path_df2['Report_Text'].str.len()
     
-    # print duplicated entries and delete 
-    dup_entries=path_df2.duplicated(subset='unique_report_id', keep=False)
-    print('Duplicated entries (will keep first only, please review):')
-    print(path_df2[dup_entries].Report_Text)
-    
-    # drop these. Why twice? Because if the report text is identical, don't need to review. But these are non-identical duplicates,
-    #  usually, these are path reports that were revised/updated
-    path_df2.drop_duplicates(subset=['unique_report_id'], keep='first', inplace=True, ignore_index=False)
+    path_df2 = (path_df2
+      .sort_values(['unique_report_id', 'report_len'])
+      .drop_duplicates(subset=['unique_report_id'], keep='last', inplace=False, ignore_index=False)
+      .drop(columns=['report_len'])
+      .sort_index()
+     )
+    ## Mod 2 ##
     
     # now set index to Report_Number
     path_df2.set_index(keys='unique_report_id', inplace=True, verify_integrity=True)
