@@ -68,10 +68,11 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
     # WARNINGS:
     # - default behavior is to remove < and >; could add a new column to mark these events if pertinent later
     import pandas as pd
+    import re
     
     # read the data
     print('Loading data from ' + path)
-    lfts = pd.read_csv(path,delimiter=delim)
+    lfts = pd.read_csv(path,delimiter=delim, error_bad_lines=False)
     
 #     if result_col != 'result':
 #         lfts['result'] = lfts.loc[:,result_col]
@@ -309,10 +310,17 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
                     elif len(numbers) == 4 and numbers[2]==1:
                         return numbers[3]
                     elif len(numbers)>0:
-                        max_num = max(numbers)
-                        print('positive only in result text but neither 1 nor 2 numbers, going on limb and taking : ' + str(max_num))
-                        print(this_string)
-                        return max_num
+                        # first try to match the expression 'positive at 1:x'
+                        m = re.search('positive at 1:(\d+)', this_string.lower())
+                        if m:
+                            return m.group(1)
+                        else:
+                            # no 'positive at' expressions.. get all the numbers and return the largest one, and print
+                            #  result text because this is a weird case..
+                            max_num = max(numbers)
+                            print('positive only in result text but neither 1 nor 2 numbers, going on limb and taking : ' + str(max_num))
+                            print(this_string)
+                            return max_num
                     
                 elif 'positive' in this_string.lower() and 'negative' in this_string.lower():
                     # both pos and neg present; find the text following the 'positive' word (15 chars)
