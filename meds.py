@@ -41,7 +41,7 @@ def load_RPDR_meds(path, delimiter='|', datetime_col='Medication_Date', prune=Tr
     
     # load a medications record
     
-    meds = pd.read_csv('data/AIH_cohort/WG08_20201109_094857_Med.txt', delimiter=delimiter, dtype=str)
+    meds = pd.read_csv(path, delimiter=delimiter, dtype=str)
     # enforce the EMPI column is strings for later
     
     meds['datetime'] = pd.to_datetime(meds.loc[:,datetime_col])
