@@ -98,7 +98,7 @@ def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
     
     # remove deleted, cancelled, and in-process path reports
     # bad_reports = (path_df.Report_Status == 'Deleted') | (path_df.Report_Status == 'Cancelled') | (path_df.Report_Status == 'In Process') | (path_df.Report_Status == 'Preliminary') | (path_df.Report_Status == 'Hold')  | (path_df.Report_Status == 'Pending')
-    bad_statuses=['Deleted', 'Cancelled', 'In Process', 'Preliminary', 'Hold', 'Pending','Unknown','In Revision']
+    bad_statuses=['Deleted', 'Cancelled', 'In Process', 'Preliminary', 'Hold', 'Pending','Unknown','In Revision', 'Not Verified']
     bad_reports = path_df.Report_Status.isin(bad_statuses)
     
     # drop rows with any of these features
@@ -235,6 +235,89 @@ def truncate_finaldx(pathdf, update=True):
     return return_df
 
 
+def truncate_lower(pathdf, update=True, only_finaldx=True):
+    
+    print('Filtering only MGH, BWH path reports...')
+    fil_subset = pathdf.MRN_Type.isin(['MGH', 'BWH'])
+    df_path = pathdf[fil_subset].copy()
+    
+    if only_finaldx:
+        # check the column exists first:
+        if 'has_final_diagnosis' in df_path.columns.tolist():
+            fil_finaldx_trunc = df_path.has_final_diagnosis == True
+            df_path = df_path[fil_finaldx_trunc]
+        else:
+            print('The flag *only_finaldx=True* was passed, however truncate_finaldx() has not been called. Aborting...')
+            return None
+
+    num_reports = df_path.shape[0]
+    has_lowersec_col = []
+    lowersec_line_col = []
+    lowersec_start_LAFD_col = []
+    trunc_path_col = []
+    
+    for i in range(0,num_reports):
+        # extract path report for this entry
+        report_text = df_path.iloc[i,:].Report_Text
+        # split by newline character
+        text_by_line = report_text.split('\n')
+        
+        has_lowersec = False
+        lowersec_line = ''
+        lowersec_start_LAFD = -1
+        trunc_path_text = report_text
+        
+        # go line-by-line and perform some checks
+        j=0
+        for line in text_by_line:
+            lower_line = line.lower()
+            
+            trimmed_line = remove_extra_spaces(line)
+            timmed_lower_line = remove_extra_spaces(lower_line)
+            
+            if has_lowersec==False and ('CLINICAL DATA' in trimmed_line or
+                                        'by his/her signature below' in timmed_lower_line or
+                                        'Final Diagnosis by' in trimmed_line or
+                                        'electronically signed out' in timmed_lower_line or
+                                        'diagnosis by:' in timmed_lower_line or
+                                        'gross description:' in timmed_lower_line or
+                                        'o. r. consultation report:' in timmed_lower_line or
+                                        'Reports to:' in trimmed_line or
+                                        'SPECIMEN TYPE:' in trimmed_line):
+                
+                has_lowersec = True
+                lowersec_line = line
+                lowersec_start_LAFD = j
+                trunc_path_text = '\n'.join(text_by_line[:j])
+            j=j+1
+
+        has_lowersec_col.append(has_lowersec)
+        lowersec_line_col.append(lowersec_line)
+        lowersec_start_LAFD_col.append(lowersec_start_LAFD)
+        trunc_path_col.append(trunc_path_text)
+        
+    df_path['has_lowersec'] = has_lowersec_col
+    df_path['lowersec_line'] = lowersec_line_col
+    df_path['lowersec_start_LAFD'] = lowersec_start_LAFD_col
+    df_path['Report_Text'] = trunc_path_col
+    
+    
+    if update:
+        # re-merge with original data
+        print('Updating input path dataframe with truncated MGH, BWH path reports')
+        pathdf['has_lowersec'] = False
+        pathdf['lowersec_line'] = ''
+        pathdf['lowersec_start_LAFD'] = -1
+        pathdf.update(df_path)
+        return_df = pathdf.copy()
+    else:
+        # return this mgh path only file
+        print('Returning MGH, BWH only entries with truncated path reports')
+        return_df = df_path
+    
+    return return_df
+
+
 def is_liver_biopsy(pathdf, update=True, only_finaldx=True): 
     ''' is_liver_biopsy(pathdf, update=True, only_finaldx=True)
     DESC: For MGH, BWH path reports, determine whether this pathology report is from a liver biopsy. 
@@ -362,7 +445,7 @@ def is_liver_biopsy(pathdf, update=True, only_finaldx=True):
 def mgh_find_note_start(pathdf, update=True, only_finaldx=True):
     
     if not 'is_liver_biopsy' in pathdf.columns.tolist():
-        print('Function requires running mgh_is_biopsy() first (uses relative positioning of the biopsy line to call note start)')
+        print('Function requires running is_liver_biopsy() first (uses relative positioning of the biopsy line to call note start)')
         return None
     
     print('Filtering only MGH path reports...')
