@@ -116,7 +116,7 @@ def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
      )
     ## Mod 2 ##
     
-    # now set index to Report_Number
+    # now set index to unique_report_id
     path_df2.set_index(keys='unique_report_id', inplace=True, verify_integrity=True)
     
     # set date time as datetime
@@ -126,12 +126,12 @@ def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
 
 def truncate_finaldx(pathdf, update=True):
     ''' truncate_finaldx(pathdf, update=True)
-    DESC: For MGH, BWH path reports, find the 'final diagnosis' line of the path report, remove everything preceding. Parse 
+    DESC: For path reports, find the 'final diagnosis' line of the path report, remove everything preceding. Parse 
      to extract whether or not there is a final diagnosis line, what that line is, and the full report text (following this line)
     
     PARAMETERS:
     pathdf: pathology dataframe from load_RPDR_path
-    update: return only MGH, BWH path as a new df or update pathdf with MGH, BWH results
+    update: return preprocessed path as a new df or update pathdf
     
     RETURNS: pathdf or new path dataframe with only MGH, BWH path reports (depending on update bool) with three new columns:
     ['has_final_diagnosis'] = did the function find a line of text that it thinks contains final diagnosis line?
@@ -140,8 +140,7 @@ def truncate_finaldx(pathdf, update=True):
     '''
     import re
     
-    # truncate to only final diagnosis (for MGH, BWH reports only)
-    print('Filtering only MGH, BWH path reports...')
+    # truncate to only final diagnosis
     
     # first get only MGH values
     #fil_mgh = pathdf.MRN_Type == 'MGH'
@@ -165,21 +164,32 @@ def truncate_finaldx(pathdf, update=True):
         has_final_diagnosis = False
         final_diagnosis_line = ''
         trunc_path_text = report_text
-        non_excl = not bool(re.search(r'\bfetus\b', report_text.lower()))
+        non_excl = not bool(re.search(r'\bfetus\b|\bfetopsy\b|\bautopsy\b', report_text.lower()))
 
         # go line-by-line and perform some checks
         j=0
         
-        if site=='MGH' and description!='Autopsy' and non_excl:
+        if site in ['MGH','BWH','NWH','FH','NSM'] and non_excl:
             for line in text_by_line:
-                lower_line = line.lower().lstrip()
+                lower_line = line.lower().strip()
                 # capture situation where a line contains liver, biopsy; note will only grab first instance then short circuit
                 
                 if (has_final_diagnosis==False) and ((
-                            ('final' in lower_line or 'pathologic' in lower_line) and 'diagnosis' in lower_line) or
-                            (lower_line.startswith('diagnosis:'))) and not (
-                                            'amend' in lower_line) and not (
-                                            'final diagnosis by' in lower_line):
+                            ('Final' in line or 'Pathologic' in line or
+                            'FINAL' in line or 'PATHOLOGIC' in line) and 'diagnosis' in lower_line) or
+                            (lower_line.startswith('diagnosis:')) or
+                            (line.strip()=='Diagnosis') or
+                            (line.startswith('SPECIMEN(S):'))) and not (
+                                            'amend' in lower_line or
+                                            'final diagnosis by' in lower_line or
+                                            'clinical data' in lower_line or
+                                            'cytogenetic' in lower_line or
+                                            'reason for' in lower_line or
+                                            'gross description' in lower_line or
+                                            'original' in lower_line or
+                                            'epithelial' in lower_line or
+                                            'unsatisfactory for evaluation' in lower_line or
+                                            'clinical history' in lower_line):
                     has_final_diagnosis = True
                     final_diagnosis_line = line
                     trunc_path_text = '\n'.join(text_by_line[j:]) # should be a list of this line and all subsequent lines
@@ -220,13 +230,14 @@ def truncate_finaldx(pathdf, update=True):
 
     if update:
         # re-merge with original data
-        print('Updating input path dataframe with truncated MGH, BWH path reports')
+        print('Updating input path dataframe with truncated path reports')
         pathdf['has_final_diagnosis'] = False
+        pathdf['final_diagnosis_line'] = ''
         pathdf.update(df_path)
         return_df = pathdf.copy()
     else:
         # return this mgh, bwh path only file
-        print('Returning only MGH, BWH entries with truncated path reports')
+        print('Returning entries with truncated path reports')
         return_df = df_path
         
         print('Done. | Status: ' + str(df_path[df_path.has_final_diagnosis==True].shape[0]) + ' reports with a final diagnosis, ' 
@@ -237,8 +248,8 @@ def truncate_finaldx(pathdf, update=True):
 
 def truncate_lower(pathdf, update=True, only_finaldx=True):
     
-    print('Filtering only MGH, BWH path reports...')
-    fil_subset = pathdf.MRN_Type.isin(['MGH', 'BWH'])
+    #print('Filtering only MGH, BWH path reports...')
+    fil_subset = pathdf.MRN_Type.isin(['MGH', 'BWH','NWH','FH','NSM'])
     df_path = pathdf[fil_subset].copy()
     
     if only_finaldx:
@@ -283,7 +294,10 @@ def truncate_lower(pathdf, update=True, only_finaldx=True):
                                         'gross description:' in timmed_lower_line or
                                         'o. r. consultation report:' in timmed_lower_line or
                                         'Reports to:' in trimmed_line or
-                                        'SPECIMEN TYPE:' in trimmed_line):
+                                        'SPECIMEN TYPE:' in trimmed_line or
+                                        'clinical diagnosis & history' in lower_line or
+                                        'pathology dept report date/time' in lower_line or
+                                        'Clinical History:'==line):
                 
                 has_lowersec = True
                 lowersec_line = line
@@ -304,7 +318,7 @@ def truncate_lower(pathdf, update=True, only_finaldx=True):
     
     if update:
         # re-merge with original data
-        print('Updating input path dataframe with truncated MGH, BWH path reports')
+        print('Updating input path dataframe with truncated path reports')
         pathdf['has_lowersec'] = False
         pathdf['lowersec_line'] = ''
         pathdf['lowersec_start_LAFD'] = -1
@@ -312,7 +326,7 @@ def truncate_lower(pathdf, update=True, only_finaldx=True):
         return_df = pathdf.copy()
     else:
         # return this mgh path only file
-        print('Returning MGH, BWH only entries with truncated path reports')
+        print('Returning entries with truncated path reports')
         return_df = df_path
     
     return return_df
@@ -320,16 +334,16 @@ def truncate_lower(pathdf, update=True, only_finaldx=True):
 
 def is_liver_biopsy(pathdf, update=True, only_finaldx=True): 
     ''' is_liver_biopsy(pathdf, update=True, only_finaldx=True)
-    DESC: For MGH, BWH path reports, determine whether this pathology report is from a liver biopsy. 
+    DESC: For path reports, determine whether this pathology report is from a liver biopsy. 
     REQUIRES: a column named Report_Text containing the full text of the path report; if only_finaldx is true, must have run
      truncate_finaldx() first 
     
     PARAMETERS:
     pathdf: pathology dataframe from load_RPDR_path (or subsequent modification)
-    update: return only mgh, bwh path as a new df or update pathdf with MGH, BWH results
+    update: return preprocessed path as a new df or update pathdf results
     only_finaldx: bool, if True, only update rows where has_final_diagnosis==True
     
-    RETURNS: pathdf or new path dataframe with MGH, BWH path reports (depending on update bool) with three new columns:
+    RETURNS: pathdf or new path dataframe with preprocessed path reports (depending on update bool) with three new columns:
     ['is_liver_biopsy'] = bool, is this a liver biopsy or not?
     ['is_liver_biopsy_line'] = text of liver biopsy line if above true
     ['liver_biopsy_LAFD'] = LAFD=Lines After Final Diagnosis, ie if final diagnosis line on line 12, and liver biopsy line 16, =16-12
@@ -338,7 +352,7 @@ def is_liver_biopsy(pathdf, update=True, only_finaldx=True):
     
     import re
     
-    print('Filtering only MGH, BWH path reports...')
+    #print('Filtering only MGH, BWH path reports...')
     #fil_mgh = pathdf.MRN_Type == 'MGH'
     df_path = pathdf.copy()
     
@@ -433,7 +447,7 @@ def is_liver_biopsy(pathdf, update=True, only_finaldx=True):
         return_df = pathdf.copy()
     else:
         # return this mgh, bwh path only file
-        print('Returning only MGH, BWH entries with truncated path reports')
+        print('Returning entries with truncated path reports')
         return_df = df_path
         
     print('Done. | Status: ' + str(df_path[df_path.is_liver_biopsy==True].shape[0]) + ' reports with likely liver biopsy, ' 
