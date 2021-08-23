@@ -195,28 +195,6 @@ def truncate_finaldx(pathdf, update=True):
                     trunc_path_text = '\n'.join(text_by_line[j:]) # should be a list of this line and all subsequent lines
 
                 j=j+1
-        
-        elif site=='BWH' and description!='Autopsy' and non_excl:
-            for line in text_by_line:
-                lower_line = line.lower().lstrip()
-                # capture situation where a line contains liver, biopsy; note will only grab first instance then short circuit
-                
-                if (has_final_diagnosis==False) and ((
-                            ('final' in lower_line or 'pathologic' in lower_line) and 'diagnosis' in lower_line) or
-                            (lower_line.startswith('diagnosis:'))) and not (
-                                            'amend' in lower_line) and not (
-                                            'final diagnosis by' in lower_line):
-
-#                 if (has_final_diagnosis==False) and ((lower_line.startswith('pathologic diagnosis:')) or
-#                              (lower_line.startswith('diagnosis:'))) and not (
-#                                             'amend' in lower_line) and not (
-#                                             'final diagnosis by' in lower_line):
-                                    
-                    has_final_diagnosis = True
-                    final_diagnosis_line = line
-                    trunc_path_text = '\n'.join(text_by_line[j:]) # should be a list of this line and all subsequent lines
-
-                j=j+1
                 
         has_final_diagnosis_col.append(has_final_diagnosis)
         final_diagnosis_line_col.append(final_diagnosis_line)
