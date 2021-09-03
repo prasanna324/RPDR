@@ -32,8 +32,8 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     config={
         "neg_termset":{
             "pseudo_negations": ts.terms['pseudo_negations'] + ['and stage', 'grade', 'active'],
-            "preceding_negations": ts.terms['preceding_negations'] + ['negative'],
-            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'is not', 'are not', 'does not', 'may not', 'have not', 'was not', 'were not', 'absent', 'not present'],
+            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of'],
+            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'may not', 'have not', 'was not', 'were not', 'absent', 'not present'],
             "termination": ts.terms['termination'] + ['note:', 'moderate']
         }
     }
@@ -301,14 +301,15 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
             print('The flag *only_finaldx=True* was passed, however truncate_finaldx() has not been called. Aborting...')
             return None
         
-    filter_keywords = df_path['Report_Text'].str.contains('steato|balloon|baloon|ballon|inflammat|hepatitis|hepatic', case=False, na=False)
-    df_path = df_path[filter_keywords]
+#     filter_keywords = df_path['Report_Text'].str.contains('steato|balloon|baloon|ballon|inflam|hepatitis|hepatic|fibrosis|bridging|cirrhosis|aih', case=False, na=False)
+#     df_path = df_path[filter_keywords]
 
     import spacy
     from negspacy.negation import Negex
     from negspacy.termsets import termset
     import numpy as np
     import pandas as pd
+    import re
     #from spacy.pipeline import EntityRuler
 
     ts = termset(term_set)
@@ -316,9 +317,9 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     config={
         "neg_termset":{
             "pseudo_negations": ts.terms['pseudo_negations'] + ['and stage', 'grade'],
-            "preceding_negations": ts.terms['preceding_negations'] + ['negative'], #'grade 0'
-            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'is not', 'are not', 'does not', 'may not', 'have not', 'was not', 'were not', 'absent', 'grade 0'],
-            "termination": ts.terms['termination'] + ['note:', 'with', ';', ', negative', ',negative'] #'negative for'
+            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of'], #'grade 0'
+            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'may not', 'have not', 'was not', 'were not', 'absent', 'grade 0'],
+            "termination": ts.terms['termination'] + ['note:', ';', ', negative', ',negative'] #'negative for', 'with'
         }
     }
 
@@ -359,6 +360,26 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     hepatitis_col = []
     autoimmune_hepatitis_col = []
     
+    cirrhosis_col = []
+    steatohepatitis_col = []
+    hepatitisa_col = []
+    hepatitisb_col = []
+    hepatitisc_col = []
+    hepatic_parenchyma_col = []
+    
+    hemochromatosis_col = []
+    antitrypsin_col = []
+    cholangitis_col = []
+    wilsons_col = []
+    drug_ind_liv_inj_col = []
+    budd_chiari_col = []
+    alcoholic_col = []
+    carcinoma_col = []
+    transplant_col = []
+    
+    nafld_col = []
+    nash_col = []
+    
     disease_list_col = []
 
     for i in range(0,num_reports):
@@ -390,31 +411,71 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         hepatitis = False
         autoimmune_hepatitis = False
         
+        cirrhosis = False
+        steatohepatitis = False
+#         hepatitisa = False
+        hepatitisb = False
+        hepatitisc = False
+        hepatic_parenchyma = False
+        
+        hemochromatosis = False
+        antitrypsin = False
+        cholangitis = False
+        wilsons = False
+        drug_ind_liv_inj = False
+        budd_chiari = False
+        alcoholic = False
+        carcinoma = False
+        transplant = False
+        
+        nafld = False
+        nash = False
+        
+        other_liv_diseases = False
+        
         steatosis_lt5 = sum([1 for ent_text in result_text.split('\n') if '<5%' in ent_text and 'steatosis' in ent_text])==0
         
         fib_stage = -1
         fib_ref = -1
         
         for x in result_text.split('\n'):
+            
+            is_disease = False
+            
             if 'steatosis' in x and 'True' in x and steatosis_lt5:
                 steatosis = True
+                is_disease = True
+            
             if ('balloon' in x or 'baloon' in x or 'ballon' in x) and 'True' in x:
                 ballooning = True
+                is_disease = True
+            
             if 'inflammation' in x and 'True' in x and inflammation==False:
                 inflammation = True
+                is_disease = True
+            
             if 'lobular' in x and 'inflammation' in x and 'True' in x:
                 lobular_inflammation = True
+                is_disease = True
 #             if 'portal' in x and 'inflammation' in x and 'True' in x:
 #                 portal_inflammation = True
+
+
             if 'zone-3' in x and 'inflammation' in x and 'True' in x:
                 zone3_inflammation = True
-            if 'lobular' in x and 'hepatitis' in x and 'True' in x:
+                is_disease = True
+            
+            if 'lobular' in x and 'hepatitis' in x and not 'steato' in x and 'True' in x:
                 lobular_hepatitis = True
-            if 'zone-3' in x and 'hepatitis' in x and 'True' in x:
+                is_disease = True
+                
+            if 'zone-3' in x and 'hepatitis' in x and not 'steato' in x and 'True' in x:
                 zone3_hepatitis = True
+                is_disease = True
             
             if 'fibrosis' in x and 'True' in x:
                 fibrosis = True
+                is_disease = True
                 
                 if 'sinusoidal' in x:
                     sinusoidal_fibrosis = True
@@ -431,31 +492,108 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
                 if 'central' in x:
                     central_fibrosis = True
                     
-                    
             if ('fibrosis' in x or 'bridging' in x or 'cirrhosis' in x) and 'True' in x and ' stage:' in x:
-                fib_stage = float(x[-12:-9])
-                fib_ref = float(x[-8:-5])
-                
-                if fib_ref<4.0:
-                    fib_ref = 4.0
-                
-                fibrosis_stage = str(fib_stage) + '/' + str(fib_ref)
-                if 'ishak' in x:
-                    fibrosis_stage = 'ishak- ' + fibrosis_stage
+                try:
+                    fib_stage = float(x[-12:-9])
+                    fib_ref = float(x[-8:-5])
+
+                    if fib_ref<4.0:
+                        fib_ref = 4.0
+
+                    fibrosis_stage = str(fib_stage) + '/' + str(fib_ref)
+                    if 'ishak' in x:
+                        fibrosis_stage = 'ishak- ' + fibrosis_stage
+                    
+                    is_disease = True
+                    
+                except:
+                    pass
             
             if 'bridging' in x and 'True' in x and not 'bridging-necrosis' in x:
                 bridging_fibrosis = True
+                is_disease = True
             
-            if 'hepatitis' in x and 'True' in x:
+            if 'hepatitis' in x and not 'steato' in x and 'True' in x:
                 hepatitis = True
+                is_disease = True
                 
-            if 'autoimmune hepatitis' in x and 'True' in x:
+            if ('autoimmune hepatitis' in x or bool(re.search(r'\baih\b', x))) and 'True' in x:
                 autoimmune_hepatitis = True
-
-            if (('steatosis' in x and not '<xf5%' in x and steatosis_lt5) or 'balloon' in x or 'baloon' in x or 'ballon' in x
-                or 'inflammation' in x or 'hepatitis' in x or 'fibrosis' in x or 'bridging') and 'True' in x:
+                is_disease = True
+            
+            if 'cirrhosis' in x and 'True' in x:
+                cirrhosis = True
+                is_disease = True
+            
+            if 'steatohepatitis' in x and 'True' in x:
+                steatohepatitis = True
+                is_disease = True
+                
+#             if bool(re.search(r'\bhepatitis a\b', x)) and 'True' in x:
+#                 hepatitisa = True
+                
+            if bool(re.search(r'\bhepatitis b\b', x)) and 'True' in x:
+                hepatitisb = True
+                is_disease = True
+                
+            if bool(re.search(r'\bhepatitis c\b', x)) and 'True' in x:
+                hepatitisc = True
+                is_disease = True
+                
+            if 'hepatic' in x and 'parenchyma' in x and 'True' in x:
+                hepatic_parenchyma = True
+                is_disease = True
+                
+            if (bool(re.search(r'\bnafld\b', x)) or 'nonalcoholic fatty liver disease' in x) and 'True' in x:
+                nafld = True
+                is_disease = True
+                
+            if (bool(re.search(r'\bnash\b', x)) or 'nonalcoholic steatohepatitis' in x) and 'True' in x:
+                nash = True
+                is_disease = True
+                
+            if 'hemochromatosis' in x and 'True' in x:
+                hemochromatosis = True
+                is_disease = True
+                
+            if 'antitrypsin' in x and 'True' in x:
+                antitrypsin = True
+                is_disease = True
+            
+            if 'cholangitis' in x and 'True' in x:
+                cholangitis = True
+                is_disease = True
+            
+            if "wilson's" in x and 'True' in x:
+                wilsons = True
+                is_disease = True
+            
+            if ('drug-induced-liver-injury' in x or bool(re.search(r'\bdili\b', x))) and 'True' in x:
+                drug_ind_liv_injury = True
+                is_disease = True
+            
+            if 'budd-chiari' in x and 'True' in x:
+                budd_chiari = True
+                is_disease = True
+                
+            if bool(re.search(r'\balcoholic\b', x)) and 'True' in x:
+                alcoholic = True
+                is_disease = True
+                
+            if ('metastatic' in x or 'metastases' in x or 'metastasis' in x or 'carcinoma' in x or 'lymphoma' in x
+               or bool(re.search(r'\bhcc\b', x)) or 'malign' in x or 'cancer' in x or 'carcinoid' in x
+               or 'angiosarcoma' in x):
+                carcinoma = True
+                is_disease = True
+                
+            if 'allograft' in x and 'True' in x:
+                transplant = True
+                is_disease = True
+                
+            if is_disease:
                 disease_list.append(x)
-        
+                
+    
         steatosis_col.append(steatosis)
         ballooning_col.append(ballooning)
         inflammation_col.append(inflammation)
@@ -477,6 +615,26 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         central_fibrosis_col.append(central_fibrosis)
         hepatitis_col.append(hepatitis)
         autoimmune_hepatitis_col.append(autoimmune_hepatitis)
+        
+        cirrhosis_col.append(cirrhosis)
+        steatohepatitis_col.append(steatohepatitis)
+#         hepatitisa_col.append(hepatitisa)
+        hepatitisb_col.append(hepatitisb)
+        hepatitisc_col.append(hepatitisc)
+        hepatic_parenchyma_col.append(hepatic_parenchyma)
+        
+        hemochromatosis_col.append(hemochromatosis)
+        antitrypsin_col.append(antitrypsin)
+        cholangitis_col.append(cholangitis)
+        wilsons_col.append(wilsons)
+        drug_ind_liv_inj_col.append(drug_ind_liv_inj)
+        budd_chiari_col.append(budd_chiari)
+        alcoholic_col.append(alcoholic)
+        carcinoma_col.append(carcinoma)
+        transplant_col.append(transplant)
+        
+        nafld_col.append(nafld)
+        nash_col.append(nash)
         
         disease_list_col.append(disease_list)
         
@@ -503,6 +661,26 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     df_path['hepatitis'] = hepatitis_col
     df_path['autoimmune_hepatitis'] = autoimmune_hepatitis_col
     
+    df_path['cirrhosis'] = cirrhosis_col
+    df_path['steatohepatitis'] = steatohepatitis_col
+#     df_path['hepatitisa'] = hepatitisa_col
+    df_path['hepatitisb'] = hepatitisb_col
+    df_path['hepatitisc'] = hepatitisc_col
+    df_path['hepatic_parenchyma'] = hepatic_parenchyma_col
+    
+    df_path['hemochromatosis'] = hemochromatosis_col
+    df_path['antitrypsin'] = antitrypsin_col
+    df_path['cholangitis'] = cholangitis_col
+    df_path['wilsons'] = wilsons_col
+    df_path['drug_ind_liv_inj'] = drug_ind_liv_inj_col
+    df_path['budd_chiari'] = budd_chiari_col
+    df_path['alcoholic'] = alcoholic_col
+    df_path['carcinoma'] = carcinoma_col
+    df_path['transplant'] = transplant_col
+    
+    df_path['nafld'] = nafld_col
+    df_path['nash'] = nash_col
+        
     df_path['disease_list'] = disease_list_col
    
     if update:
@@ -530,6 +708,26 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         pathdf['hepatitis'] = np.nan
         pathdf['autoimmune_hepatitis'] = np.nan
         
+        pathdf['cirrhosis'] = np.nan
+        pathdf['steatohepatitis'] = np.nan
+#         pathdf['hepatitisa'] = np.nan
+        pathdf['hepatitisb'] = np.nan
+        pathdf['hepatitisc'] = np.nan
+        pathdf['hepatic_parenchyma'] = np.nan
+        
+        pathdf['hemochromatosis'] = np.nan
+        pathdf['antitrypsin'] = np.nan
+        pathdf['cholangitis'] = np.nan
+        pathdf['wilsons'] = np.nan
+        pathdf['drug_ind_liv_inj'] = np.nan
+        pathdf['budd_chiari'] = np.nan
+        pathdf['alcoholic'] = np.nan
+        pathdf['carcinoma'] = np.nan
+        pathdf['transplant'] = np.nan
+        
+        pathdf['nafld'] = np.nan
+        pathdf['nash'] = np.nan
+            
         pathdf['disease_list'] = np.nan
         pathdf.update(df_path)
         return_df = pathdf.copy()
@@ -558,6 +756,11 @@ def entity_recognition_liver(text, nlp):
                 .replace(' as well as', ', ')
                 .replace('neither', 'no').replace('nor', 'no')
                 .replace('very', '')
+                .replace('non alcoholic', 'nonalcoholic')
+                .replace('non-alcoholic', 'nonalcoholic')
+                .replace('steato-hepatitis', 'steatohepatitis')
+                .replace('steato hepatitis', 'steatohepatitis')
+                .replace('nonalcoholic steatohepatitis', 'nonalcoholic-steatohepatitis')
                 .replace('inflammatory', 'inflammation')
                 .replace('inflamed', 'inflammation')
                 .replace('severely', 'severe')
@@ -588,7 +791,8 @@ def entity_recognition_liver(text, nlp):
                 .replace('kupffer cell', 'kupffer-cell')
                 .replace('zone 3', 'zone-3')
                 .replace('hepatic plate', 'hepatic-plate')
-                .replace('hepatic ', 'hepatitis ')
+                .replace('hepatic parenchyma', 'hepatic-parenchyma')
+#                 .replace('hepatic ', 'hepatitis ')
                 .replace('steatotic', 'steatosis')
                 .replace('microvesicular ', 'microvesicular-')
                 .replace('macrovesicular ', 'macrovesicular-')
@@ -608,6 +812,7 @@ def entity_recognition_liver(text, nlp):
                 .replace('pericellular fibrosis', 'pericellular-fibrosis')
                 .replace('perivenular fibrosis', 'perivenular-fibrosis')
                 .replace('septal fibrosis', 'septal-fibrosis')
+                .replace('fibrous septa', 'septal-fibrosis')
                 .replace('central fibrosis', 'central-fibrosis')
                 .replace('ductal fibrosis', 'ductal-fibrosis')
                 .replace('portal bridging', 'portal-bridging')
@@ -616,8 +821,19 @@ def entity_recognition_liver(text, nlp):
                 .replace(' bridging;', ' active-bridging;')
                 .replace(' bridging,', ' active-bridging,')
                 .replace('(p-p)','')
-                #.replace('chronic ', 'chronic-')
-                #.replace('active ', 'active-')
+                .replace(' hep ', ' hepatitis ')
+                .replace('a1at', 'alpha-1-antitrypsin')
+#                 .replace('alpha-1 antitrypsin', 'alpha-1-antitrypsin')
+#                 .replace('alpha 1 antitrypsin', 'alpha-1-antitrypsin')
+#                 .replace('alpha - 1 antitrypsin', 'alpha-1-antitrypsin')
+#                 .replace('alpha 1-antitrypsin', 'alpha-1-antitrypsin')
+                .replace('wilsons disease', "wilson's disease")
+                .replace('wilson disease', "wilson's disease")
+                .replace('drug induced liver injury', 'drug-induced-liver-injury')
+                .replace('drug-induced liver injury', 'drug-induced-liver-injury')
+                .replace('drug induced cholestatic liver injury', 'drug-induced-liver-injury')
+                .replace('budd chiari', 'budd-chiari')
+                .replace('hepatocellular carcinoma', 'hepatocellular-carcinoma')
                )
         
         if 'fibrosis' in line:
@@ -784,6 +1000,8 @@ def entity_recognition_liver(text, nlp):
                 stagelist_1 = re.findall(r'stage.*?(\d+(?:\.\d+)?).*?(\d+(?:\.\d+)?)', line)
                 stagelist_2 = re.findall(r'stage.*?(\d+(?:\.\d+)?)', line)
                 
+                stagelist_ishak = re.findall(r'ishak.*?(\d+(?:\.\d+)?).*?(\d+(?:\.\d+)?)', line)
+                
                 dist_fib = abs(line.find('fibrosis')-line.find('stage'))
                 dist_pbc = abs(line.find('pbc')-line.find('stage'))
                 
@@ -801,14 +1019,21 @@ def entity_recognition_liver(text, nlp):
                         if bool_1 or bool_2:
                             stage_val = float(stagelist_1[0][0])
                             ref_val = float(stagelist_1[0][1])
+                    
+                    if len(stagelist_ishak)==1:
+                        stage_val = float(stagelist_ishak[0][0])
+                        ref_val = float(stagelist_ishak[0][1])
 
                     if stage_val>=5:
                         ref_val = 6.0
+                    
+                    if ref_val<=6 and stage_val<=ref_val:
+                        
+                        if 'ishak' in line:
+                            e_text = e_text + ' ishak'
+                            ref_val = 6.0
 
-                    if 'ishak' in line:
-                        e_text = e_text + ' ishak'
-
-                    e_text = e_text + ' stage: ' + str(stage_val) + '/' + str(ref_val)
+                        e_text = e_text + ' stage: ' + str(stage_val) + '/' + str(ref_val)
 
                     if stage_val==0:
                         e_bool = True
