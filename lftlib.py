@@ -11,6 +11,10 @@ def load_RPDR_labs_multiple(dir_data, path_labs, path_synonyms, datetime_col='Se
         See load_native_data for remainder of parameters which are passed to that function
         
         '''
+    
+    import warnings
+    warnings.warn("lftlib.load_RPDR_labs_multiple is deprecated; use labs.load_RPDR_labs_multiple")
+    
     import os
     import pandas as pd
     
@@ -63,6 +67,9 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
      
     Note: input result column will be returned as 'result_orig' and the processed result column will be returned as 'result'
     '''
+    import warnings
+    warnings.warn("lftlib.load_RPDR_labs is deprecated; use labs.load_RPDR_labs")
+    
     # read data
     # 
     # WARNINGS:
@@ -378,26 +385,21 @@ def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='
     
     return lfts, removed_rows
 
+
+
 def find_all_num_in_string(sentence):
     # accepts a sentence; returns an array of all numbers in the sentence
     import re
     
+    import warnings
+    warnings.warn("lftlib.find_all_num_in_string is deprecated; use labs.find_all_num_in_string")
+    
     s = [float(s) for s in re.findall(r'-?\d+\.?\d*', sentence)]
     return s
 
-
-
-def load_meds(path, delimiter='|', datetime_col='Medication_Date', prune=True):
-    import pandas as pd
-    
-    # load a medications record
-    
-    meds = pd.read_csv('data/AIH_cohort/WG08_20201109_094857_Med.txt', delimiter=delimiter, dtype=str)
-    # enforce the EMPI column is strings for later
-    
-    meds['datetime'] = pd.to_datetime(meds.loc[:,datetime_col])
-    
-    return meds[['EMPI', 'EPIC_PMRN', 'MRN_Type', 'MRN', 'datetime', 'Medication', 'Code_Type', 'Code', 'Quantity', 'Inpatient_Outpatient']]
+#################################################
+## lftlib starts here. DELETE ABOVE
+#################################################
 
 def get_table_traj(table,empi):
     filter_pt = (table.EMPI == empi)
@@ -765,6 +767,13 @@ def on_interval(t1,t2,LL2,UL2,dt_LL=4,dt_UL=5):
     return best_idx
     
 def find_nearest(array, value):
+    '''find_nearest(array, value)
+    
+    array : array to search for value
+    value : value to search for
+    
+    returns value_of_array_at_nearest, idx_of_array_at_nearest
+    '''
     import numpy as np
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
@@ -1102,3 +1111,7 @@ def load_obj(load_path):
     import pickle
     with open(load_path + '.pkl', 'rb') as f:
         return pickle.load(f)
+
+# def find_two_closest_vals
+# from itertools import product
+# min(product(arr1, arr2), key=lambda t: abs(t[0]-t[1]))[0]
