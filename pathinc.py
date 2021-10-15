@@ -63,7 +63,7 @@ def load_RPDR_path(path,delimiter='|', datetime_col='Report_Date_Time'):
     
     ## default Report_Text format is multi-line. If string_format==True, convert multi-line text by double-quoting all quotes
     ##  (which allows read_csv to read through by default), and enclosing full report in single-quotes
-    write_path = path.replace('.','_multiline_corrected.')
+    write_path = path.replace('.txt','_multiline_corrected.txt')
     if os_path.exists(write_path)==False:
         print('Reformatting path file to allow multi-line report text to be readable, saving as : {}'.format(write_path))
         f = open(path,'r')
