@@ -39,7 +39,10 @@ def load_RPDR_labs_multiple(dir_data, path_labs, path_synonyms, datetime_col='Se
             if return_discarded:
                 concat_discard=pd.concat([concat_discard, discarded],ignore_index=True)
     
-    return concat_pd, 
+    if return_discarded:
+        return concat_pd, concat_discard
+    else:
+        return concat_pd
 
 def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='Result', test_col='Group_Id', delim='|', clean_columns=True):
     '''load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='Result', test_col='Group_Id', delim='|', clean_columns=True):
