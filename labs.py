@@ -1,5 +1,5 @@
 
-def load_RPDR_labs_multiple(dir_data, path_labs, path_synonyms, datetime_col='Seq_Date_Time', result_col='Result', test_col='Group_Id', delim='|', clean_columns=True):
+def load_RPDR_labs_multiple(dir_data, path_labs, path_synonyms, datetime_col='Seq_Date_Time', result_col='Result', test_col='Group_Id', delim='|', clean_columns=True, return_discarded=False):
     ''' load_labs_multiple(dir_data, path_labs, path_synonyms, datetime_col='Seq_Date_Time', result_col='Result', test_col='Group_Id', delim='|', clean_columns=True):
         Sequentially loads all files from RPDR data dump when multiple files have the same name. 
         
@@ -31,11 +31,15 @@ def load_RPDR_labs_multiple(dir_data, path_labs, path_synonyms, datetime_col='Se
         
         if first==True:
             concat_pd = lfts
+            if return_discarded:
+                concat_discard = discarded
             first=False
         else:
             concat_pd=pd.concat([concat_pd, lfts],ignore_index=True)
+            if return_discarded:
+                concat_discard=pd.concat([concat_discard, discarded],ignore_index=True)
     
-    return concat_pd
+    return concat_pd, 
 
 def load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='Result', test_col='Group_Id', delim='|', clean_columns=True):
     '''load_RPDR_labs(path,path_synonyms,datetime_col='Seq_Date_Time', result_col='Result', test_col='Group_Id', delim='|', clean_columns=True):
