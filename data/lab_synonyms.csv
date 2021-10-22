@@ -1,0 +1,8 @@
+﻿ALT,AST,AKP,INR,TBILI,DBILI,CR,IGG,AMA,LKM,ANA
+Transaminase-SGPT,Transaminase-SGOT,Alkaline Phosphatase,PT-INR,Total Bilirubin,Direct Bilirubin,Creatinine,Immunoglobulin G,Mitochondrial Ab titer,LKM-1 Ab,ANA (qual)
+SGPT/ALT,SGOT/AST,"ALK PHOS,TOTAL",INR ISTAT,"BILIRUBIN,TOTAL",DIRECT BILI,Plasma Creatinine,"Total IGG,Mayo",,LKM Ab,ANA titer
+SGPT,SGOT,ALK PHOS,,"Bilirubin, Total",DBILIRUBIN,"CREATININE, SERUM","IGG, S",,,ANA screen (HEP2)
+,,"ALK PHOS, TOTAL",,TOTAL BILIRUBIN,DIRECT BILIRUBIN,".CREATININE,PLASMA",.IMMUNOGLOBULIN G,,,
+,,ALKALINE PHOSPHATASE,,"BILIRUBIN, TOTAL",Bilirubin (Direct),Plasma CR,"IGG, TOTAL",,,
+,,"AKP, TOTAL",,Bilirubin (Total),,CREATININE,IMMUNOGLOBULIN G,,,
+,,Alk Phos,,,,,IgG,,,
