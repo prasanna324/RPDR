@@ -31,7 +31,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
 
     config={
         "neg_termset":{
-            "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out'],
+            "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out', 'although not apparent'],
             "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of'],
             "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'not present'],
             "termination": ts.terms['termination'] + ['note:', ';', ', negative', ',negative']
@@ -520,6 +520,7 @@ def entity_recognition_colon(text, nlp):
         line = (line
                 .replace('+/-', ',')
                 .replace(' no ', ' , no ')
+                .replace('is not present', 'not present').replace('no present', 'not present').replace('not present', ' is not present')
                 .replace(' minimal ', ' ,minimal ')
                 .replace('noted in the', ' in ')
                 .replace('is noted in', ' in ')
@@ -818,9 +819,9 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
 
     config={
         "neg_termset":{
-            "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out'],
+            "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out', 'although not apparent'],
             "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of'], #'grade 0'
-            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'grade 0'],
+            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'grade 0', 'not present'],
             "termination": ts.terms['termination'] + ['note:', ';', ', negative', ',negative'] #'negative for', 'with'
         }
     }
@@ -1326,6 +1327,8 @@ def entity_recognition_liver(text, nlp):
         line = (line
                 .replace('+/-', ',')
                 .replace(' no ', ' , no ')
+                .replace('no present', 'not present')
+                .replace('is not present', 'not present').replace('not present', ' is not present')
                 .replace(' minimal ', ' ,minimal ')
                 .replace('noted in the', ' in ')
                 .replace('is noted in', ' in ')
@@ -1358,7 +1361,8 @@ def entity_recognition_liver(text, nlp):
                 .replace('chronic ', 'chronic_')
                 .replace('focal ', 'focal_')
                 .replace(' areas', ' area')
-                .replace(' area', '-area')
+                .replace('-area ', ' area ')
+                .replace('portal area', 'portalarea')
                 .replace(' tracts', 'tract')
                 .replace('-tracts', 'tract')
                 .replace('portal tract', 'portaltract')
@@ -1383,12 +1387,12 @@ def entity_recognition_liver(text, nlp):
                 .replace('< 5%', '<5%')
                 .replace('non classical', 'nonclassical')
                 .replace('non-classical', 'nonclassical')
-                .replace('ballooning degeneration', 'ballooning-degeneration')
-                .replace('hepatocyte ballooning', 'hepatocyte-ballooning')
-                .replace('hepatocytic ballooning', 'hepatocytic-ballooning')
-                .replace('heptocellular ballooning', 'heptocellular-ballooning')
+                .replace('ballooning degeneration', 'ballooning_degeneration')
+#                 .replace('hepatocyte ballooning', 'hepatocyte-ballooning')
+#                 .replace('hepatocytic ballooning', 'hepatocytic-ballooning')
+#                 .replace('heptocellular ballooning', 'heptocellular-ballooning')
                 .replace('ballooned', 'ballooning')
-                .replace('ballooning', 'ballooning (baloning)')
+                .replace('ballooning', 'baloning')
                 .replace('portal to portal', 'portal-portal')
                 .replace('central to central', 'central-central')
                 .replace('portal to central', 'portal-central')
@@ -1437,6 +1441,11 @@ def entity_recognition_liver(text, nlp):
                 .replace('centrilobular necrosis', 'centrilobular-necrosis')
                 .replace('centrilobular hepatic necrosis', 'centrilobular-hepatic-necrosis')
                 .replace('droplet steatosis', 'droplet-steatosis')
+#                 .replace('_inflammation', ' inflammation')
+                .replace('_lobular', ' lobular')
+                .replace('_portal', ' portal')
+                .replace('early cirrhotic', 'early cirrhotic (cirrhosis)')
+                
                )
         
         if 'fibrosis' in line:
@@ -1495,7 +1504,7 @@ def entity_recognition_liver(text, nlp):
             
             port_tract_inf = bool(re.search(r'\b(?:portaltract\W+(?:\w+\W+){0,5}?inflammation)\b', line))
             
-            lob_port_inf = bool(re.search(r'\b(?:lobular&portal\W+(?:\w+\W+){0,2}?inflammation)\b', line))
+            lob_port_inf = bool(re.search(r'\b(?:lobular&portal\W+(?:\w+\W+){0,3}?inflammation)\b', line))
 
             lobu_act = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,3}?activity)\b', line))
             port_act = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,3}?activity)\b', line))
@@ -1510,6 +1519,12 @@ def entity_recognition_liver(text, nlp):
             
             zone1_fib = bool(re.search(r'\b(?:zone-1\W+(?:\w+\W+){0,3}?fibrosis|fibrosis\W+(?:\w+\W+){0,3}?zone-1)\b', line))
             
+            cent_scar_1 = bool(re.search(r'\b(?:central\W+(?:\w+\W+){0,2}?scarring|scarring\W+(?:\w+\W+){0,4}?central)\b', line))
+            cent_scar_2 = bool(re.search(r'\b(?:centrilobular\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,4}?centrilobular)\b', line))
+            cent_scar_3 = bool(re.search(r'\b(?:pericentral\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,4}?pericentral)\b', line))
+            cent_scar = cent_scar_1 or cent_scar_3 or cent_scar_3
+            
+            port_scar_1 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,}?scarring|scarring\W+(?:\w+\W+){0,4}?portal)\b', line))
             
 #             stg_fib = bool(re.search(r'\b(?:fibrosis\W+(?:\w+\W+){0,8}?stage|stage\W+(?:\w+\W+){0,6}?fibrosis)\b', line))
 #             stg_bri = bool(re.search(r'\b(?:bridging\W+(?:\w+\W+){0,8}?stage|stage\W+(?:\w+\W+){0,6}?bridging)\b', line))
@@ -1533,19 +1548,19 @@ def entity_recognition_liver(text, nlp):
             if 'lobular&portal' in line and 'inflammation' in e_text and not 'lobular&portal' in e_text and lob_port_inf:
                 e_text = 'lobular&portal ' + e_text
             
-            if 'lobular' in line and 'inflammation' in e_text and not 'lobular' in e_text and lobu_inf and inf_count<=1:
+            if 'inflammation' in e_text and not 'lobular' in e_text and lobu_inf and inf_count<=1:
                 e_text = 'lobular ' + e_text
             
-            if 'lobular' in line and 'inflammation' in e_text and not 'lobular' in e_text and not 'portal' in e_text and not 'lobular-inflammation' in line and lobu_inf and inf_count>1:
+            if 'inflammation' in e_text and not 'lobular' in e_text and not 'portal' in e_text and not 'lobular-inflammation' in line and lobu_inf and inf_count>1:
                 e_text = 'lobular ' + e_text
             
-            if 'portal' in line and 'inflammation' in e_text and not 'portal' in e_text and port_inf and inf_count<=1:
+            if 'inflammation' in e_text and not 'portal' in e_text and port_inf and inf_count<=1:
                 e_text = 'portal ' + e_text
                 
-            if 'portal' in line and 'inflammation' in e_text and not 'portal' in e_text and not 'lobular' in e_text and not 'portal inflammation' in line and port_inf and inf_count>1:
+            if 'inflammation' in e_text and not 'portal' in e_text and not 'lobular' in e_text and not 'portal inflammation' in line and port_inf and inf_count>1:
                 e_text = 'portal ' + e_text
             
-            if ('portaltract' in line or 'portal-area' in line) and 'inflammation' in e_text and not 'portal' in e_text  and (port_inf or port_tract_inf):
+            if ('portaltract' in line or 'portalarea' in line) and 'inflammation' in e_text and not 'portal' in e_text  and (port_inf or port_tract_inf):
                 e_text = 'portal ' + e_text
                 
             if 'lobular' in line and 'activity' in e_text and not 'lobular' in e_text and lobu_act:
@@ -1576,6 +1591,12 @@ def entity_recognition_liver(text, nlp):
                 
             if 'fibrosis' in e_text and centrilob_fib and not 'centrilobular' in e_text:
                 e_text = 'centrilobular ' + e_text
+                
+            if 'scarring' in e_text and cent_scar and not 'central' in e_text:
+                e_text = 'central ' + e_text
+                
+            if 'scarring' in e_text and port_scar and not 'portal' in e_text:
+                e_text = 'portal ' + e_text
             
             
 #             if 'fibrosis' in e_text:
@@ -1650,8 +1671,13 @@ def entity_recognition_liver(text, nlp):
                         if 'ishak' in line:
                             e_text = e_text + ' ishak'
                             ref_val = 6.0
-
+                        
+                        if stage_val>stage_val_prev:
                         e_text = e_text + ' stage: ' + str(stage_val) + '/' + str(ref_val)
+                        
+                        stage_val_prev = stage_val
+                        ref_val_prev = ref_val
+                        
 
                     if stage_val==0:
                         e_bool = True
