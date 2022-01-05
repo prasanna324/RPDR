@@ -32,7 +32,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     config={
         "neg_termset":{
             "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out', 'although not apparent'],
-            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of'],
+            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of', 'rather than', 'history'],
             "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'not present'],
             "termination": ts.terms['termination'] + ['note:', ';', ', negative', ',negative']
         }
@@ -56,6 +56,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     num_reports = df_path.shape[0]
     
     erythema_col = []
+    marked_erythema_col = []
     inflammation_col = []
     mild_inflammation_col = []
     moderate_inflammation_col = []
@@ -65,6 +66,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     granularity_col = []
     ulceration_col = []
     friability_col = []
+    mild_friability_col = []
     spont_bleeding_col = []
     adherent_blood_col = []
     erosion_col = []
@@ -72,6 +74,14 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     edema_col = []
     pseudopolyp_col = []
     crohns_col = []
+    
+    superficial_ulcer_col = []
+    shallow_ulcer_col = []
+    aphthous_ulcer_col = []
+    small_ulcer_col = []
+    large_ulcer_col = []
+    deep_ulcer_col = []
+    mild_ulcer_col = []
     
     colitis_col = []
     chronic_colitis_col = []
@@ -98,6 +108,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     cryptitis_col = []
     lymphoid_agg_col = []
     lamina_propria_col = []
+    granuloma_col = []
     noncaseating_gran_col = []
     nonnecrotizing_gran_col = []
     paneth_cell_col = []
@@ -115,6 +126,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         result_text = entity_recognition_colon(report_text, nlp=nlp_2)
         
         erythema = np.nan
+        marked_erythema = np.nan
         inflammation = np.nan
         mild_inflammation = np.nan
         moderate_inflammation = np.nan
@@ -124,6 +136,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         granularity = np.nan
         ulceration = np.nan
         friability = np.nan
+        mild_friability = np.nan
         spont_bleeding = np.nan
         adherent_blood = np.nan
         erosion = np.nan
@@ -131,6 +144,14 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         edema = np.nan
         pseudopolyp = np.nan
         crohns = np.nan
+        
+        superficial_ulcer = np.nan
+        shallow_ulcer = np.nan
+        aphthous_ulcer = np.nan
+        small_ulcer = np.nan
+        large_ulcer = np.nan
+        deep_ulcer = np.nan
+        mild_ulcer = np.nan
         
         colitis = np.nan
         chronic_colitis = np.nan
@@ -157,6 +178,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         cryptitis = np.nan
         lymphoid_agg = np.nan
         lamina_propria = np.nan
+        granuloma = np.nan
         noncaseating_gran = np.nan
         nonnecrotizing_gran = np.nan
         paneth_cell = np.nan
@@ -170,9 +192,12 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
             
             is_disease = False
             
-            if 'erythem' in x and (np.isnan(erythema) or 'True' in x):
+            if ('erythem' in x and not 'marked' in x) and (np.isnan(erythema) or 'True' in x):
                 if 'True' in x: erythema, is_disease = True, True
                 else: erythema = False
+            if ('marked' in x and 'erythema' in x) and (np.isnan(marked_erythema) or 'True' in x):
+                if 'True' in x: marked_erythema, is_disease = True, True
+                else: marked_erythema = False
             if ('inflammat' in x or 'inflamed' in x) and (np.isnan(inflammation) or 'True' in x):
                 if 'True' in x: inflammation, is_disease = True, True
                 else: inflammation = False
@@ -188,18 +213,21 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
             if ('loss-of-vasculature' in x or 'absent-vascular' in x) and (np.isnan(loss_vasculature) or 'True' in x):
                 if 'True' in x: loss_vasculature, is_disease = True, True
                 else: loss_vasculature = False
-            if 'decreased-vasculature' in x and (np.isnan(dec_vasculature) or 'True' in x):
+            if ('decreased-vasculature' in x or 'altered-vascular' in x) and (np.isnan(dec_vasculature) or 'True' in x):
                 if 'True' in x: dec_vasculature, is_disease = True, True
                 else: dec_vasculature = False
             if ('granular' in x or 'granulation' in x) and (np.isnan(granularity) or 'True' in x):
                 if 'True' in x: granularity, is_disease = True, True
                 else: granularity = False
-            if 'ulcer' in x and (np.isnan(ulceration) or 'True' in x):
+            if ('ulcer' in x and not 'ulcerativecolitis' in x) and (np.isnan(ulceration) or 'True' in x):
                 if 'True' in x: ulceration, is_disease = True, True
                 else: ulceration = False
-            if ('friable' in x or 'friability' in x) and (np.isnan(friability) or 'True' in x):
+            if (('friable' in x or 'friability' in x) and not 'mild' in x) and (np.isnan(friability) or 'True' in x):
                 if 'True' in x: friability, is_disease = True, True
                 else: friability = False
+            if (('friable' in x or 'friability' in x) and 'mild' in x) and (np.isnan(mild_friability) or 'True' in x):
+                if 'True' in x: mild_friability, is_disease = True, True
+                else: mild_friability = False
             if ('spontaneous' in x and ('bleed' in x or 'bled' in x)) and (np.isnan(spont_bleeding) or 'True' in x):
                 if 'True' in x: spont_bleeding, is_disease = True, True
                 else: spont_bleeding = False
@@ -221,6 +249,29 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
             if 'crohn' in x and (np.isnan(crohns) or 'True' in x):
                 if 'True' in x: crohns, is_disease = True, True
                 else: crohns = False
+                    
+            if (('superficial' in x or 'superfacial' in x) and 'ulcer' in x) and (np.isnan(superficial_ulcer) or 'True' in x):
+                if 'True' in x: superficial_ulcer, is_disease = True, True
+                else: superficial_ulcer = False
+            if ('shallow' in x and 'ulcer' in x) and (np.isnan(shallow_ulcer) or 'True' in x):
+                if 'True' in x: shallow_ulcer, is_disease = True, True
+                else: shallow_ulcer = False
+            if ('aphthous' in x and 'ulcer' in x) and (np.isnan(aphthous_ulcer) or 'True' in x):
+                if 'True' in x: aphthous_ulcer, is_disease = True, True
+                else: aphthous_ulcer = False
+            if ('small' in x and 'ulcer' in x) and (np.isnan(small_ulcer) or 'True' in x):
+                if 'True' in x: small_ulcer, is_disease = True, True
+                else: small_ulcer = False
+            if ('large' in x and 'ulcer' in x) and (np.isnan(large_ulcer) or 'True' in x):
+                if 'True' in x: large_ulcer, is_disease = True, True
+                else: large_ulcer = False
+            if ('deep' in x and 'ulcer' in x) and (np.isnan(deep_ulcer) or 'True' in x):
+                if 'True' in x: deep_ulcer, is_disease = True, True
+                else: deep_ulcer = False
+            if ('mild' in x and (bool(re.search(r'\bulcer\b|\bulceration\b', x)))) and (np.isnan(mild_ulcer) or 'True' in x):
+                if 'True' in x: mild_ulcer, is_disease = True, True
+                else: mild_ulcer = False
+                    
             
             if 'colitis' in x and (np.isnan(colitis) or 'True' in x):
                 if 'True' in x: colitis, is_disease = True, True
@@ -295,6 +346,10 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
             if ('lamina-propria' in x and (('increase' in x and 'cellularity' in x) or ('inflammation' in x))) and (np.isnan(lamina_propria) or 'True' in x):
                 if 'True' in x: lamina_propria, is_disease = True, True
                 else: lamina_propria = False
+            
+            if ('granuloma' in x) and (np.isnan(granuloma) or 'True' in x):
+                if 'True' in x: granuloma, is_disease = True, True
+                else: granuloma = False
             if ('noncaseating' in x and 'granuloma' in x) and (np.isnan(noncaseating_gran) or 'True' in x):
                 if 'True' in x: noncaseating_gran, is_disease = True, True
                 else: noncaseating_gran = False
@@ -319,15 +374,17 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
                 disease_list.append(x)
         
         erythema_col.append(erythema)
+        marked_erythema_col.append(marked_erythema)
         inflammation_col.append(inflammation)
         mild_inflammation_col.append(mild_inflammation)
         moderate_inflammation_col.append(moderate_inflammation)
-        severe_inflammation_col.append(severe_inflammation)
+        severe_inflammation_col.append(severe_inflammation)4
         loss_vasculature_col.append(loss_vasculature)
         dec_vasculature_col.append(dec_vasculature)
         granularity_col.append(granularity)
         ulceration_col.append(ulceration)
         friability_col.append(friability)
+        mild_friability_col.append(mild_friability)
         spont_bleeding_col.append(spont_bleeding)
         adherent_blood_col.append(adherent_blood)
         erosion_col.append(erosion)
@@ -335,6 +392,14 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         edema_col.append(edema)
         pseudopolyp_col.append(pseudopolyp)
         crohns_col.append(crohns)
+        
+        superficial_ulcer_col.append(superficial_ulcer)
+        shallow_ulcer_col.append(shallow_ulcer)
+        aphthous_ulcer_col.append(aphthous_ulcer)
+        small_ulcer_col.append(small_ulcer)
+        large_ulcer_col.append(large_ulcer)
+        deep_ulcer_col.append(deep_ulcer)
+        mild_ulcer_col.append(mild_ulcer)
     
         colitis_col.append(colitis)
         chronic_colitis_col.append(chronic_colitis)
@@ -361,6 +426,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         cryptitis_col.append(cryptitis)
         lymphoid_agg_col.append(lymphoid_agg)
         lamina_propria_col.append(lamina_propria)
+        granuloma_col.append(granuloma)
         noncaseating_gran_col.append(noncaseating_gran)
         nonnecrotizing_gran_col.append(nonnecrotizing_gran)
         paneth_cell_col.append(paneth_cell)
@@ -371,6 +437,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         disease_list_col.append(disease_list)
         
     df_path['erythema'] = erythema_col
+    df_path['marked_erythema'] = marked_erythema_col
     df_path['inflammation'] = inflammation_col
     df_path['mild_inflammation'] = mild_inflammation_col
     df_path['moderate_inflammation'] = moderate_inflammation_col
@@ -380,6 +447,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     df_path['granularity'] = granularity_col
     df_path['ulceration'] = ulceration_col
     df_path['friability'] = friability_col
+    df_path['mild_friability'] = mild_friability_col
     df_path['spont_bleeding'] = spont_bleeding_col
     df_path['adherent_blood'] = adherent_blood_col
     df_path['erosion'] = erosion_col
@@ -387,6 +455,14 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     df_path['edema'] = edema_col
     df_path['pseudopolyp'] = pseudopolyp_col
     df_path['crohns'] = crohns_col
+    
+    df_path['superficial_ulcer'] = superficial_ulcer_col
+    df_path['shallow_ulcer'] = shallow_ulcer_col
+    df_path['aphthous_ulcer'] = aphthous_ulcer_col
+    df_path['small_ulcer'] = small_ulcer_col
+    df_path['large_ulcer'] = large_ulcer_col
+    df_path['deep_ulcer'] = deep_ulcer_col
+    df_path['mild_ulcer'] = mild_ulcer_col
     
     df_path['colitis'] = colitis_col
     df_path['chronic_colitis'] = chronic_colitis_col
@@ -413,6 +489,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     df_path['cryptitis'] = cryptitis_col
     df_path['lymphoid_agg'] = lymphoid_agg_col
     df_path['lamina_propria'] = lamina_propria_col
+    df_path['granuloma'] = granuloma_col
     df_path['noncaseating_gran'] = noncaseating_gran_col
     df_path['nonnecrotizing_gran'] = nonnecrotizing_gran_col
     df_path['paneth_cell'] = paneth_cell_col
@@ -427,6 +504,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         print('Updating input path dataframe')
         
         pathdf['erythema'] = np.nan
+        pathdf['marked_erythema'] = np.nan
         pathdf['inflammation'] = np.nan
         pathdf['mild_inflammation'] = np.nan
         pathdf['moderate_inflammation'] = np.nan
@@ -436,6 +514,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         pathdf['granularity'] = np.nan
         pathdf['ulceration'] = np.nan
         pathdf['friability'] = np.nan
+        pathdf['mild_friability'] = np.nan
         pathdf['spont_bleeding'] = np.nan
         pathdf['adherent_blood'] = np.nan
         pathdf['erosion'] = np.nan
@@ -443,6 +522,14 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         pathdf['edema'] = np.nan
         pathdf['pseudopolyp'] = np.nan
         pathdf['crohns'] = np.nan
+        
+        pathdf['superficial_ulcer'] = np.nan
+        pathdf['shallow_ulcer'] = np.nan
+        pathdf['aphthous_ulcer'] = np.nan
+        pathdf['small_ulcer'] = np.nan
+        pathdf['large_ulcer'] = np.nan
+        pathdf['deep_ulcer'] = np.nan
+        pathdf['mild_ulcer'] = np.nan
         
         pathdf['colitis'] = np.nan
         pathdf['chronic_colitis'] = np.nan
@@ -469,6 +556,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         pathdf['cryptitis'] = np.nan
         pathdf['lymphoid_agg'] = np.nan
         pathdf['lamina_propria'] = np.nan
+        pathdf['granuloma'] = np.nan
         pathdf['noncaseating_gran'] = np.nan
         pathdf['nonnecrotizing_gran'] = np.nan
         pathdf['paneth_cell'] = np.nan
@@ -504,6 +592,7 @@ def entity_recognition_colon(text, nlp):
             .replace(' CUC', ' Chronic-UlcerativeColitis').replace(' CUC\n', ' Chronic-UlcerativeColitis\n')
             .replace(' U.C.', ' UlcerativeColitis')
             .replace('c. diff', 'c-diff').replace('C. diff', 'C-diff').replace('C. Diff', 'C-Diff').replace('c. Diff', 'c-Diff')
+            .replace(' CD ', ' CD (Crohns) ').replace(' CD.', ' CD (Crohns).')
            )
     text = re.sub(' UC$', ' UlcerativeColitis', text)
     
@@ -522,6 +611,9 @@ def entity_recognition_colon(text, nlp):
                 .replace(' no ', ' , no ')
                 .replace('is not present', 'not present').replace('no present', 'not present').replace('not present', ' is not present')
                 .replace(' minimal ', ' ,minimal ')
+                .replace('ulcerations', 'ulceration')
+                .replace('ulcers', 'ulcer')
+                .replace('apthous', 'aphthous')
                 .replace('noted in the', ' in ')
                 .replace('is noted in', ' in ')
                 .replace('neither', 'no').replace('nor', 'no')
@@ -574,6 +666,7 @@ def entity_recognition_colon(text, nlp):
                 .replace('grade i ', 'grade 1 ')
                 .replace('absent vascular', 'absent-vascular')
                 .replace('decreased vasculature', 'decreased-vasculature')
+                .replace('altered vascular', 'altered-vascular')
                 .replace('spontaneous hemorrhage', 'spontaneous hemorrhage (spontaneous-bleeding)')
                 .replace('spontaneous bleed ', 'spontaneous bleed (spontaneous-bleeding)')
                 .replace('spontaneous bleed,', 'spontaneous bleed (spontaneous-bleeding),')
@@ -607,6 +700,18 @@ def entity_recognition_colon(text, nlp):
                 .replace('inflammatory', 'inflammation')
                 .replace('paneth cell', 'paneth-cell')
                 .replace('c diff', 'c-diff')
+                .replace('marked erythema', 'marked-erythema')
+                .replace('superficial erosion', 'superficial_erosion')
+                .replace('superficial ulcer', 'superficial_ulcer')
+                .replace('shallow ulcer', 'shallow_ulcer')
+                .replace('aphthous ulcer', 'aphthous_ulcer')
+                .replace('aphthous lesion', 'aphthous_lesion')
+                .replace('small bowel', 'small_bowel').replace('small intestine', 'small_intestine')
+                .replace('small ulcer', 'small_ulcer')
+                .replace('large ulcer', 'large_ulcer')
+                .replace('deep ulcer', 'deep_ulcer')
+                .replace('mild ulcer', 'mild_ulcer')
+                
                 
 #                 .replace('mayo ', 'mayo-')
 #                 .replace('chronic active', 'chronic-active')
@@ -659,15 +764,40 @@ def entity_recognition_colon(text, nlp):
         act_ile = bool(re.search(r'\b(?:.*active\W+(?:\w+\W+){0,2}?.*ileitis|.*ileitis\W+(?:\w+\W+){0,2}?active)\b', line))
         act_ent = bool(re.search(r'\b(?:.*active\W+(?:\w+\W+){0,2}?.*enteritis|.*enteritis\W+(?:\w+\W+){0,2}?active)\b', line))
 
-        noncas_gran_1 = bool(re.search(r'\b(?:.*noncaseating\W+(?:\w+\W+){0,2}?.*granuloma|.*granuloma\W+(?:\w+\W+){0,2}?noncaseating)\b', line))
-        noncas_gran_2 = bool(re.search(r'\b(?:.*noncaseating\W+(?:\w+\W+){0,2}?.*granulomas|.*granulomas\W+(?:\w+\W+){0,2}?noncaseating)\b', line)) 
+        noncas_gran_1 = bool(re.search(r'\b(?:noncaseating\W+(?:\w+\W+){0,2}?granuloma|granuloma\W+(?:\w+\W+){0,2}?noncaseating)\b', line))
+        noncas_gran_2 = bool(re.search(r'\b(?:noncaseating\W+(?:\w+\W+){0,2}?granulomas|granulomas\W+(?:\w+\W+){0,2}?noncaseating)\b', line)) 
         noncas_gran = (noncas_gran_1 or noncas_gran_2)
         
-        nonnec_gran_1 = bool(re.search(r'\b(?:.*nonnecrotizing\W+(?:\w+\W+){0,2}?.*granuloma|.*granuloma\W+(?:\w+\W+){0,2}?nonnecrotizing)\b', line))
-        nonnec_gran_2 = bool(re.search(r'\b(?:.*nonnecrotizing\W+(?:\w+\W+){0,2}?.*granulomas|.*granulomas\W+(?:\w+\W+){0,2}?nonnecrotizing)\b', line)) 
+        nonnec_gran_1 = bool(re.search(r'\b(?:nonnecrotizing\W+(?:\w+\W+){0,2}?granuloma|granuloma\W+(?:\w+\W+){0,2}?nonnecrotizing)\b', line))
+        nonnec_gran_2 = bool(re.search(r'\b(?:nonnecrotizing\W+(?:\w+\W+){0,2}?granulomas|granulomas\W+(?:\w+\W+){0,2}?nonnecrotizing)\b', line)) 
         nonnec_gran = (nonnec_gran_1 or nonnec_gran_2)
         
-        lamprop_inf = bool(re.search(r'\b(?:.*lamina-propria\W+(?:\w+\W+){0,2}?inflammation|inflammation\W+(?:\w+\W+){0,3}?lamina-propria)\b', line))
+        lamprop_inf = bool(re.search(r'\b(?:lamina-propria\W+(?:\w+\W+){0,2}?inflammation|inflammation\W+(?:\w+\W+){0,3}?lamina-propria)\b', line))
+        
+        sup_ulcer_1 = bool(re.search(r'\b(?:superficial\W+(?:\w+\W+){0,4}?ulcer|ulcer\W+(?:\w+\W+){0,2}?superficial)\b', line))
+        sup_ulcer_2 = bool(re.search(r'\b(?:superficial\W+(?:\w+\W+){0,4}?ulceration|ulceration\W+(?:\w+\W+){0,2}?superficial)\b', line)) 
+        sup_ulcer = (sup_ulcer_1 or sup_ulcer_2)
+        
+        shal_ulcer_1 = bool(re.search(r'\b(?:shallow\W+(?:\w+\W+){0,4}?ulcer|ulcer\W+(?:\w+\W+){0,2}?shallow)\b', line))
+        shal_ulcer_2 = bool(re.search(r'\b(?:shallow\W+(?:\w+\W+){0,4}?ulceration|ulceration\W+(?:\w+\W+){0,2}?shallow)\b', line)) 
+        shal_ulcer = (shal_ulcer_1 or shal_ulcer_2)
+        
+        aph_ulcer_1 = bool(re.search(r'\b(?:aphthous\W+(?:\w+\W+){0,3}?ulcer|ulcer\W+(?:\w+\W+){0,1}?aphthous)\b', line))
+        aph_ulcer_2 = bool(re.search(r'\b(?:aphthous\W+(?:\w+\W+){0,3}?ulceration|ulceration\W+(?:\w+\W+){0,1}?aphthous)\b', line)) 
+        aph_ulcer = (aph_ulcer_1 or aph_ulcer_2)
+        
+        sml_ulcer_1 = bool(re.search(r'\b(?:small\W+(?:\w+\W+){0,3}?ulcer)\b', line))
+        sml_ulcer_2 = bool(re.search(r'\b(?:small\W+(?:\w+\W+){0,3}?ulceration)\b', line))
+        sml_ulcer = (sml_ulcer_1 or sml_ulcer_2)
+        
+        lrg_ulcer_1 = bool(re.search(r'\b(?:large\W+(?:\w+\W+){0,4}?ulcer|ulcer\W+(?:\w+\W+){0,1}?large)\b', line))
+        lrg_ulcer_2 = bool(re.search(r'\b(?:large\W+(?:\w+\W+){0,4}?ulceration|ulceration\W+(?:\w+\W+){0,1}?large)\b', line)) 
+        lrg_ulcer = (lrg_ulcer_1 or lrg_ulcer_2)
+        
+        dp_ulcer_1 = bool(re.search(r'\b(?:deep\W+(?:\w+\W+){0,5}?ulcer|ulcer\W+(?:\w+\W+){0,2}?deep)\b', line))
+        dp_ulcer_2 = bool(re.search(r'\b(?:deep\W+(?:\w+\W+){0,5}?ulceration|ulceration\W+(?:\w+\W+){0,2}?deep)\b', line)) 
+        dp_ulcer = (dp_ulcer_1 or dp_ulcer_2)
+        
         
         lamprop_inccel = False
         if 'lamina-propria' in line and 'increase' in line and 'cellularity' in line:
@@ -745,6 +875,26 @@ def entity_recognition_colon(text, nlp):
             if 'lamina-propria' in e_text and lamprop_inccel:
                 e_text = e_text + ' (increased-cellularity)'
                 
+            if 'superficial' in e_text and not 'ulcer' in e_text and sup_ulcer:
+                e_text = e_text + ' (superficial-ulcer)'
+                
+            if 'shallow' in e_text and not 'ulcer' in e_text and shal_ulcer:
+                e_text = e_text + ' (shallow-ulcer)'
+                
+            if 'aphthous' in e_text and not 'ulcer' in e_text and aph_ulcer:
+                e_text = e_text + ' (aphthous-ulcer)'
+                
+            if 'small' in e_text and not 'ulcer' in e_text and sml_ulcer:
+                e_text = e_text + ' (small-ulcer)'
+                
+            if 'large' in e_text and not 'ulcer' in e_text and lrg_ulcer:
+                e_text = e_text + ' (large-ulcer)'
+                
+            if 'deep' in e_text and not 'ulcer' in e_text and dp_ulcer:
+                e_text = e_text + ' (deep-ulcer)'
+                
+    
+                
             if 'colitis' in e_text:
                 if mild_col and 'mild' not in e_text:
                     e_text = e_text + ' (mild)'
@@ -820,7 +970,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     config={
         "neg_termset":{
             "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out', 'although not apparent'],
-            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of'], #'grade 0'
+            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of', 'rather than'], #'grade 0'
             "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'grade 0', 'not present'],
             "termination": ts.terms['termination'] + ['note:', ';', ', negative', ',negative'] #'negative for', 'with'
         }
@@ -866,6 +1016,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     autoimmune_hepatitis_col = []
     mallory_col = []
     
+    pbc_col = []
     cirrhosis_col = []
     steatohepatitis_col = []
     hepatitisa_col = []
@@ -926,6 +1077,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         hepatitis = np.nan
         autoimmune_hepatitis = np.nan
         mallory = np.nan
+        
+        pbc = np.nan
         cirrhosis = np.nan
         steatohepatitis = np.nan
         hepatitisa = np.nan
@@ -972,7 +1125,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
             if 'inflammation' in x and (np.isnan(inflammation) or 'True' in x):
                 if 'True' in x: inflammation, is_disease = True, True
                 else: inflammation = False
-            if 'lobular' in x and ('inflammation' in x or 'activity' in x) and (np.isnan(lobular_inflammation) or 'True' in x):
+            if 'lobular' in x and ('inflammation' in x or 'activity' in x or 'infiltrate' in x) and (np.isnan(lobular_inflammation) or 'True' in x):
                 if 'True' in x: lobular_inflammation, is_disease = True, True
                 else: lobular_inflammation = False
             if 'zone-3' in x and 'inflammation' in x and (np.isnan(zone3_inflammation) or 'True' in x):
@@ -1032,7 +1185,11 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
             if 'mallory' in x and (np.isnan(mallory) or 'True' in x):
                 if 'True' in x: mallory, is_disease = True, True
                 else: mallory = False
-            if 'cirrhosis' in x and (np.isnan(cirrhosis) or 'True' in x):
+            
+            if ('biliary' in x and 'cirrhosis' in x) and (np.isnan(pbc) or 'True' in x):
+                if 'True' in x: pbc, is_disease = True, True
+                else: pbc = False
+            if ('cirrhosis' in x and 'biliary' not in x) and (np.isnan(cirrhosis) or 'True' in x):
                 if 'True' in x: cirrhosis, is_disease = True, True
                 else: cirrhosis = False
             if 'steatohepatitis' in x and (np.isnan(steatohepatitis) or 'True' in x):
@@ -1052,6 +1209,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
                 or bool(re.search(r'\bhep b\b', x)) or bool(re.search(r'\bhbv\b', x))) and (np.isnan(hepatitisb) or 'True' in x):
                 if 'True' in x: hepatitisb, is_disease = True, True
                 else: hepatitisb = False
+            # Need to add bool(re.search(r'\bchronichepatitis c\b', x)) bool(re.search(r'\bhepatitis c\b', x))
+            # bool(re.search(r'\bhepatitis c\b', x))
             if (bool(re.search(r'\bhepatitis c\b', x)) or bool(re.search(r'\bhepatitis-c\b', x)) 
                     or bool(re.search(r'\bhcv\b', x)) or bool(re.search(r'\bhep c\b', x))
                     or 'ishak' in x) and (np.isnan(hepatitisc) or 'True' in x):
@@ -1119,9 +1278,9 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
                     if fib_ref<4.0:
                         fib_ref = 4.0
                         
-                    if fib_ref==4:
+                    if fib_ref==4 and np.isnan(fibrosis_stage_4):
                         fibrosis_stage_4 = fib_stage
-                    elif fib_ref==6:
+                    elif fib_ref==6 and np.isnan(fibrosis_stage_6):
                         fibrosis_stage_6 = fib_stage
                     
                     is_disease = True
@@ -1159,6 +1318,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         autoimmune_hepatitis_col.append(autoimmune_hepatitis)
         mallory_col.append(mallory)
         
+        pbc_col.append(pbc)
         cirrhosis_col.append(cirrhosis)
         steatohepatitis_col.append(steatohepatitis)
         hepatitisa_col.append(hepatitisa)
@@ -1213,6 +1373,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     df_path['autoimmune_hepatitis'] = autoimmune_hepatitis_col
     df_path['mallory'] = mallory_col
     
+    df_path['pbc'] = pbc_col
     df_path['cirrhosis'] = cirrhosis_col
     df_path['steatohepatitis'] = steatohepatitis_col
     df_path['hepatitisa'] = hepatitisa_col
@@ -1269,6 +1430,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         pathdf['autoimmune_hepatitis'] = np.nan
         pathdf['mallory'] = np.nan
         
+        pathdf['pbc'] = np.nan
         pathdf['cirrhosis'] = np.nan
         pathdf['steatohepatitis'] = np.nan
         pathdf['hepatitisa'] = np.nan
@@ -1314,6 +1476,8 @@ def entity_recognition_liver(text, nlp):
     text = (text
             .replace('Hep. A', 'Hep A').replace('Hep. B', 'Hep B').replace('Hep. C', 'Hep C')
             .replace('/IV', '/4').replace('/VI', '/6')
+            .replace('PBC', 'PBC (primary biliary cirrhosis)')
+            .replace('PSC', 'PSC (primary sclerosing cholangitis)')
            )
     
     text = text.lower().replace(' bridging.', ' active-bridging.') #.replace(';',' ')
@@ -1388,9 +1552,9 @@ def entity_recognition_liver(text, nlp):
                 .replace('non classical', 'nonclassical')
                 .replace('non-classical', 'nonclassical')
                 .replace('ballooning degeneration', 'ballooning_degeneration')
-#                 .replace('hepatocyte ballooning', 'hepatocyte-ballooning')
-#                 .replace('hepatocytic ballooning', 'hepatocytic-ballooning')
-#                 .replace('heptocellular ballooning', 'heptocellular-ballooning')
+                .replace('hepatocyte ballooning', 'hepatocyte-ballooning')
+                .replace('hepatocytic ballooning', 'hepatocytic-ballooning')
+                .replace('heptocellular ballooning', 'heptocellular-ballooning')
                 .replace('ballooned', 'ballooning')
                 .replace('ballooning', 'baloning')
                 .replace('portal to portal', 'portal-portal')
@@ -1441,11 +1605,14 @@ def entity_recognition_liver(text, nlp):
                 .replace('centrilobular necrosis', 'centrilobular-necrosis')
                 .replace('centrilobular hepatic necrosis', 'centrilobular-hepatic-necrosis')
                 .replace('droplet steatosis', 'droplet-steatosis')
-#                 .replace('_inflammation', ' inflammation')
+#                 .replace('_inflammation', ' iniflammation')
                 .replace('_lobular', ' lobular')
                 .replace('_portal', ' portal')
                 .replace('early cirrhotic', 'early cirrhotic (cirrhosis)')
-                
+                .replace('primary biliary cirrhosis', 'primary_biliary_cirrhosis')
+                .replace('biliary cirrhosis', 'biliary_cirrhosis')
+                .replace('billiary cirrhosis', 'biliary_cirrhosis')
+                .replace('AMA negative', 'AMA-negative')
                )
         
         if 'fibrosis' in line:
@@ -1497,6 +1664,9 @@ def entity_recognition_liver(text, nlp):
             lobu_inf_2 = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,3}?necroinflammatory)\b', line))
             lobu_inf = lobu_inf_1 or lobu_inf_2
             
+            lobu_infil = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,4}?infiltrate)\b', line))
+            
+            
             zone3_inf = bool(re.search(r'\b(?:zone-3\W+(?:\w+\W+){0,2}?inflammation|inflammation\W+(?:\w+\W+){0,1}?zone-3)\b', line))
             
             # port_inf = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,3}?inflammation|inflammation\W+(?:\w+\W+){0,1}?portal)\b', line))
@@ -1524,7 +1694,11 @@ def entity_recognition_liver(text, nlp):
             cent_scar_3 = bool(re.search(r'\b(?:pericentral\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,4}?pericentral)\b', line))
             cent_scar = cent_scar_1 or cent_scar_3 or cent_scar_3
             
-            port_scar_1 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,}?scarring|scarring\W+(?:\w+\W+){0,4}?portal)\b', line))
+            port_scar_1 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?portal)\b', line))
+            port_scar_2 = bool(re.search(r'\b(?:portaltract\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?portaltract)\b', line))
+            port_scar_3 = bool(re.search(r'\b(?:portalarea\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?portalarea)\b', line))
+            port_scar_4 = bool(re.search(r'\b(?:periportal\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?periportal)\b', line))
+            port_scar = port_scar_1 or port_scar_2 or port_scar_3 or port_scar_4
             
 #             stg_fib = bool(re.search(r'\b(?:fibrosis\W+(?:\w+\W+){0,8}?stage|stage\W+(?:\w+\W+){0,6}?fibrosis)\b', line))
 #             stg_bri = bool(re.search(r'\b(?:bridging\W+(?:\w+\W+){0,8}?stage|stage\W+(?:\w+\W+){0,6}?bridging)\b', line))
@@ -1597,6 +1771,9 @@ def entity_recognition_liver(text, nlp):
                 
             if 'scarring' in e_text and port_scar and not 'portal' in e_text:
                 e_text = 'portal ' + e_text
+                
+            if 'infiltrate' in e_text and lobu_infil and not 'lobular' in e_text:
+                e_text = 'lobular ' + e_text
             
             
 #             if 'fibrosis' in e_text:
@@ -1671,13 +1848,8 @@ def entity_recognition_liver(text, nlp):
                         if 'ishak' in line:
                             e_text = e_text + ' ishak'
                             ref_val = 6.0
-                        
-                        if stage_val>stage_val_prev:
+
                         e_text = e_text + ' stage: ' + str(stage_val) + '/' + str(ref_val)
-                        
-                        stage_val_prev = stage_val
-                        ref_val_prev = ref_val
-                        
 
                     if stage_val==0:
                         e_bool = True
