@@ -32,8 +32,8 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     config={
         "neg_termset":{
             "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out', 'although not apparent'],
-            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of', 'rather than', 'history'],
-            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'not present'],
+            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of', 'rather than', 'history', 'precludes'],
+            "following_negations": ts.terms['following_negations'] + ['negative', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'not present'], #unremarkable
             "termination": ts.terms['termination'] + ['note:', ';', ', negative', ',negative']
         }
     }
@@ -378,7 +378,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         inflammation_col.append(inflammation)
         mild_inflammation_col.append(mild_inflammation)
         moderate_inflammation_col.append(moderate_inflammation)
-        severe_inflammation_col.append(severe_inflammation)4
+        severe_inflammation_col.append(severe_inflammation)
         loss_vasculature_col.append(loss_vasculature)
         dec_vasculature_col.append(dec_vasculature)
         granularity_col.append(granularity)
@@ -970,8 +970,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     config={
         "neg_termset":{
             "pseudo_negations": ts.terms['pseudo_negations'] + ['not limited to', 'not excluded', 'needs to be ruled out', 'although not apparent'],
-            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of', 'rather than'], #'grade 0'
-            "following_negations": ts.terms['following_negations'] + ['negative', 'unremarkable', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'grade 0', 'not present'],
+            "preceding_negations": ts.terms['preceding_negations'] + ['negative', 'insufficient', 'without evidence of', 'rather than', 'precludes'], #'grade 0'
+            "following_negations": ts.terms['following_negations'] + ['negative', 'ruled out', 'less likely', 'is not', 'are not', 'does not', 'have not', 'was not', 'were not', 'absent', 'not present'], #unremarkable
             "termination": ts.terms['termination'] + ['note:', ';', ', negative', ',negative'] #'negative for', 'with'
         }
     }
@@ -1036,6 +1036,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     budd_chiari_col = []
     alcoholic_col = []
     carcinoma_col = []
+    methotrexate_col = []
+    ext_hematopoiesis_col = []
     
     nafld_col = []
     nash_col = []
@@ -1098,6 +1100,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         budd_chiari = np.nan
         alcoholic = np.nan
         carcinoma = np.nan
+        methotrexate = np.nan
+        ext_hematopoiesis = np.nan
         
         nafld = np.nan
         nash = np.nan
@@ -1147,10 +1151,10 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
             if ('fibrosis' in x and 'sinusoidal' in x) and (np.isnan(sinusoidal_fibrosis) or 'True' in x):
                 if 'True' in x: sinusoidal_fibrosis, is_disease = True, True
                 else: sinusoidal_fibrosis = False
-            if ('fibrosis' in x and 'portal' in x and not 'peri-portal' in x) and (np.isnan(portal_fibrosis) or 'True' in x):
+            if (('fibrosis' in x or 'septa' in x) and 'portal' in x and not 'periportal' in x) and (np.isnan(portal_fibrosis) or 'True' in x):
                 if 'True' in x: portal_fibrosis, is_disease = True, True
                 else: portal_fibrosis = False
-            if ('fibrosis' in x and 'peri-portal' in x) and (np.isnan(periportal_fibrosis) or 'True' in x):
+            if (('fibrosis' in x or 'septa' in x) and 'periportal' in x) and (np.isnan(periportal_fibrosis) or 'True' in x):
                 if 'True' in x: periportal_fibrosis, is_disease = True, True
                 else: periportal_fibrosis = False
             if ('fibrosis' in x and 'pericellular' in x) and (np.isnan(pericellular_fibrosis) or 'True' in x):
@@ -1206,14 +1210,15 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
                 if 'True' in x: hepatitisa, is_disease = True, True
                 else: hepatitisa = False
             if (bool(re.search(r'\bhepatitis b\b', x)) or bool(re.search(r'\bhepatitis-b\b', x)) 
-                or bool(re.search(r'\bhep b\b', x)) or bool(re.search(r'\bhbv\b', x))) and (np.isnan(hepatitisb) or 'True' in x):
+                    or bool(re.search(r'\bhep b\b', x)) or bool(re.search(r'\bhbv\b', x)) 
+                    or '_hbv' in x) and (np.isnan(hepatitisb) or 'True' in x):
                 if 'True' in x: hepatitisb, is_disease = True, True
                 else: hepatitisb = False
             # Need to add bool(re.search(r'\bchronichepatitis c\b', x)) bool(re.search(r'\bhepatitis c\b', x))
             # bool(re.search(r'\bhepatitis c\b', x))
             if (bool(re.search(r'\bhepatitis c\b', x)) or bool(re.search(r'\bhepatitis-c\b', x)) 
                     or bool(re.search(r'\bhcv\b', x)) or bool(re.search(r'\bhep c\b', x))
-                    or 'ishak' in x) and (np.isnan(hepatitisc) or 'True' in x):
+                    or 'ishak' in x or '_hcv' in x) and (np.isnan(hepatitisc) or 'True' in x):
                 if 'True' in x: hepatitisc, is_disease = True, True
                 else: hepatitisc = False
             if ('drug' in x and 'hepatitis' in x) and (np.isnan(drug_hepatitis) or 'True' in x):
@@ -1250,7 +1255,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
             if 'budd-chiari' in x and (np.isnan(budd_chiari) or 'True' in x):
                 if 'True' in x: budd_chiari, is_disease = True, True
                 else: budd_chiari = False
-            if bool(re.search(r'\balcoholic\b', x)) and (np.isnan(alcoholic) or 'True' in x):
+            if (bool(re.search(r'\balcoholic\b', x)) or 'ethanol' in x) and (np.isnan(alcoholic) or 'True' in x):
                 if 'True' in x: alcoholic, is_disease = True, True
                 else: alcoholic = False
             if ('metastatic' in x or 'metastases' in x or 'metastasis' in x or 'carcinoma' in x or 'lymphoma' in x
@@ -1258,6 +1263,13 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
                        or 'angiosarcoma' in x) and (np.isnan(carcinoma) or 'True' in x):
                 if 'True' in x: carcinoma, is_disease = True, True
                 else: carcinoma = False
+                    
+            if 'methotrexate' in x and (np.isnan(methotrexate) or 'True' in x):
+                if 'True' in x: methotrexate, is_disease = True, True
+                else: methotrexate = False
+            if 'extramedullary-hematopoiesis' in x and (np.isnan(ext_hematopoiesis) or 'True' in x):
+                if 'True' in x: ext_hematopoiesis, is_disease = True, True
+                else: ext_hematopoiesis = False
             
             if (bool(re.search(r'\bnafld\b', x)) or 'nonalcoholic fatty liver disease' in x) and (np.isnan(nafld) or 'True' in x):
                 if 'True' in x: nafld, is_disease = True, True
@@ -1338,6 +1350,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         budd_chiari_col.append(budd_chiari)
         alcoholic_col.append(alcoholic)
         carcinoma_col.append(carcinoma)
+        methotrexate_col.append(methotrexate)
+        ext_hematopoiesis_col.append(ext_hematopoiesis)
         
         nafld_col.append(nafld)
         nash_col.append(nash)
@@ -1393,6 +1407,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     df_path['budd_chiari'] = budd_chiari_col
     df_path['alcoholic'] = alcoholic_col
     df_path['carcinoma'] = carcinoma_col
+    df_path['methotrexate'] = methotrexate_col
+    df_path['ext_hematopoiesis'] = ext_hematopoiesis_col
     
     df_path['nafld'] = nafld_col
     df_path['nash'] = nash_col
@@ -1450,6 +1466,8 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         pathdf['budd_chiari'] = np.nan
         pathdf['alcoholic'] = np.nan
         pathdf['carcinoma'] = np.nan
+        pathdf['methotrexate'] = np.nan
+        pathdf['ext_hematopoiesis'] = np.nan
         
         pathdf['nafld'] = np.nan
         pathdf['nash'] = np.nan
@@ -1507,7 +1525,7 @@ def entity_recognition_liver(text, nlp):
                 .replace('steato hepatitis', 'steatohepatitis')
                 .replace('nonalcoholic steatohepatitis', 'nonalcoholic-steatohepatitis')
                 .replace('inflammatory infiltrate', 'inflammatory-infiltrate')
-                .replace('necroinflammatory', 'necro-inflammation')
+                .replace('necroinflammatory', 'necroinflammatory (inflammation)')
                 .replace('centric inflammation', 'centric-inflammation')
                 .replace('inflammatory', 'inflammation')
                 .replace('inflamed', 'inflammation')
@@ -1522,16 +1540,16 @@ def entity_recognition_liver(text, nlp):
                 .replace('mild ', 'mild_').replace('(mild) ', 'mild_').replace('(mild)', 'mild_')
                 .replace('severe ', 'severe_').replace('(severe) ', 'severe_').replace('(severe)', 'severe_')
                 .replace('minimal ', 'minimal_')
-                .replace('chronic ', 'chronic_')
+                .replace('chronic ', '')
                 .replace('focal ', 'focal_')
                 .replace(' areas', ' area')
                 .replace('-area ', ' area ')
-                .replace('portal area', 'portalarea')
+#                 .replace('portal area', 'portalarea')
                 .replace(' tracts', 'tract')
                 .replace('-tracts', 'tract')
                 .replace('portal tract', 'portaltract')
 #                 .replace('centrilobular', 'centri-lobular')
-                .replace('periportal', 'peri-portal')
+                .replace('peri-portal', 'periportal')
                 .replace('portal and lobular', 'portal&lobular')
                 .replace('portal or lobular', 'portal&lobular')
                 .replace('lobular and portal', 'lobular&portal')
@@ -1571,9 +1589,11 @@ def entity_recognition_liver(text, nlp):
                 .replace('centrilobular fibrosis', 'centrilobular-fibrosis')
                 .replace('septal fibrosis', 'septal-fibrosis')
                 .replace('fibrous septa', 'septal-fibrosis')
+                .replace('portal septa', 'portal-septa')
                 .replace('central fibrosis', 'central-fibrosis')
                 .replace('ductal fibrosis', 'ductal-fibrosis')
                 .replace('portal bridging', 'portal-bridging')
+                .replace('portal expansion', 'portal-expansion')
                 .replace('central bridging', 'central-bridging')
                 .replace(' bridging ', ' active-bridging ')
                 .replace(' bridging;', ' active-bridging;')
@@ -1606,26 +1626,29 @@ def entity_recognition_liver(text, nlp):
                 .replace('centrilobular hepatic necrosis', 'centrilobular-hepatic-necrosis')
                 .replace('droplet steatosis', 'droplet-steatosis')
 #                 .replace('_inflammation', ' iniflammation')
-                .replace('_lobular', ' lobular')
-                .replace('_portal', ' portal')
+                .replace('_lobular', ' lobular').replace('_portal', ' portal')
+                .replace('_fibrosis', ' fibrosis').replace('_inflammation', ' inflammation')
                 .replace('early cirrhotic', 'early cirrhotic (cirrhosis)')
                 .replace('primary biliary cirrhosis', 'primary_biliary_cirrhosis')
                 .replace('biliary cirrhosis', 'biliary_cirrhosis')
                 .replace('billiary cirrhosis', 'biliary_cirrhosis')
                 .replace('AMA negative', 'AMA-negative')
+                .replace('nash- ', 'nash ')
+                .replace('extramedullary hematopoiesis', 'extramedullary-hematopoiesis')
+                
                )
         
-        if 'fibrosis' in line:
-            line = (line
-                    .replace('pericellular ', 'pericellular-fibrosis ').replace('pericellular,', 'pericellular-fibrosis ')
-                    .replace('sinusoidal ', 'sinusoidal-fibrosis ').replace('sinusoidal,', 'sinusoidal-fibrosis ')
-#                     .replace(' perisinusoidal ', ' perisinusoidal-fibrosis ').replace(' perisinusoidal,', ' perisinusoidal-fibrosis ')
-                    .replace('portal ', 'portal-fibrosis ').replace('portal,', 'portal-fibrosis ')
-                    .replace('central ', 'central-fibrosis ').replace('central,', 'central-fibrosis ')
-                    .replace('septal ', 'septal-fibrosis ').replace('septal,', 'septal-fibrosis ')
-                    .replace('ductal ', 'ductal-fibrosis ').replace('ductal,', 'ductal-fibrosis ')
-                    .replace('perivenular ', 'perivenular-fibrosis ').replace('perivenular,', 'perivenular-fibrosis ')
-                   )
+#         if 'fibrosis' in line:
+#             line = (line
+#                     .replace('pericellular ', 'pericellular-fibrosis ').replace('pericellular,', 'pericellular-fibrosis ')
+#                     .replace('sinusoidal ', 'sinusoidal-fibrosis ').replace('sinusoidal,', 'sinusoidal-fibrosis ')
+# #                     .replace(' perisinusoidal ', ' perisinusoidal-fibrosis ').replace(' perisinusoidal,', ' perisinusoidal-fibrosis ')
+#                     .replace('periportal ', 'periportal-fibrosis ').replace('periportal, ', 'periportal-fibrosis, ')
+#                     .replace('central ', 'central-fibrosis ').replace('central,', 'central-fibrosis ')
+#                     .replace('septal ', 'septal-fibrosis ').replace('septal,', 'septal-fibrosis ')
+#                     .replace('ductal ', 'ductal-fibrosis ').replace('ductal,', 'ductal-fibrosis ')
+#                     .replace('perivenular ', 'perivenular-fibrosis ').replace('perivenular,', 'perivenular-fibrosis ')
+#                    )
         if 'bridging' in line:
             line = (line
                     .replace('portal-portal-fibrosis', 'portal-portal-fibrosis-bridging')
@@ -1660,12 +1683,23 @@ def entity_recognition_liver(text, nlp):
 
             inf_count = line.count('inflammation')
             
-            lobu_inf_1 = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,3}?inflammation)\b', line))
-            lobu_inf_2 = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,3}?necroinflammatory)\b', line))
-            lobu_inf = lobu_inf_1 or lobu_inf_2
+            lobu_inf1 = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,3}?inflammation)\b', line))
+            lobu_inf2 = bool(re.search(r'\b(?:lobules\W+(?:\w+\W+){0,6}?inflammation|inflammation\W+(?:\w+\W+){0,3}?lobules)\b', line))
+            lobu_inf3 = bool(re.search(r'\b(?:lobule\W+(?:\w+\W+){0,6}?inflammation|inflammation\W+(?:\w+\W+){0,3}?lobule)\b', line))
+            lobu_inf4 = bool(re.search(r'\b(?:centrilobular\W+(?:\w+\W+){0,3}?inflammation|inflammation\W+(?:\w+\W+){0,6}?centrilobular)\b', line))
             
-            lobu_infil = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,4}?infiltrate)\b', line))
+            lobu_inf = (lobu_inf1 or lobu_inf2 or lobu_inf3 or lobu_inf4)
             
+#             lobu_inf_2 = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,3}?necroinflammatory)\b', line))
+#             lobu_inf = lobu_inf_1 or lobu_inf_2
+            
+            lobu_infil1 = bool(re.search(r'\b(?:lobular\W+(?:\w+\W+){0,4}?infiltrate)\b', line))
+            lobu_infil2 = bool(re.search(r'\b(?:infiltrate\W+(?:\w+\W+){0,6}?lobules)\b', line))
+            lobu_infil3 = bool(re.search(r'\b(?:infiltrate\W+(?:\w+\W+){0,6}?lobular)\b', line))
+            lobu_infil4 = bool(re.search(r'\b(?:infiltrate\W+(?:\w+\W+){0,3}?centrilobular)\b', line))
+            
+            lobu_infil = (lobu_infil1 or lobu_infil2 or lobu_infil3 or lobu_infil4)
+
             
             zone3_inf = bool(re.search(r'\b(?:zone-3\W+(?:\w+\W+){0,2}?inflammation|inflammation\W+(?:\w+\W+){0,1}?zone-3)\b', line))
             
@@ -1696,7 +1730,7 @@ def entity_recognition_liver(text, nlp):
             
             port_scar_1 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?portal)\b', line))
             port_scar_2 = bool(re.search(r'\b(?:portaltract\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?portaltract)\b', line))
-            port_scar_3 = bool(re.search(r'\b(?:portalarea\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?portalarea)\b', line))
+            port_scar_3 = bool(re.search(r'\b(?:portal area\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?portalarea)\b', line))
             port_scar_4 = bool(re.search(r'\b(?:periportal\W+(?:\w+\W+){0,3}?scarring|scarring\W+(?:\w+\W+){0,1}?periportal)\b', line))
             port_scar = port_scar_1 or port_scar_2 or port_scar_3 or port_scar_4
             
@@ -1704,17 +1738,28 @@ def entity_recognition_liver(text, nlp):
 #             stg_bri = bool(re.search(r'\b(?:bridging\W+(?:\w+\W+){0,8}?stage|stage\W+(?:\w+\W+){0,6}?bridging)\b', line))
 #             stg_cir = bool(re.search(r'\b(?:cirrhosis\W+(?:\w+\W+){0,8}?stage|stage\W+(?:\w+\W+){0,6}?cirrhosis)\b', line))
             
-            sin_fib = bool(re.search(r'\b(?:sinusoidal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?sinusoidal)\b', line))
-            perisin_fib = bool(re.search(r'\b(?:perisinusoidal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?perisinusoidal)\b', line))
-            periport_fib = bool(re.search(r'\b(?:peri-portal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?peri-portal)\b', line))
-            port_fib = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?portal)\b', line))
-            bridg_fib = bool(re.search(r'\b(?:bridging\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?bridging)\b', line))
-            cent_fib = bool(re.search(r'\b(?:central\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?central)\b', line))
-            sept_fib = bool(re.search(r'\b(?:septal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?septal)\b', line))
-            periven_fib = bool(re.search(r'\b(?:perivenular\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?perivenular)\b', line))
-            pericel_fib = bool(re.search(r'\b(?:pericellular\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?pericellular)\b', line))
+#             sin_fib = bool(re.search(r'\b(?:sinusoidal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?sinusoidal)\b', line))
+#             perisin_fib = bool(re.search(r'\b(?:perisinusoidal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?perisinusoidal)\b', line))
+#             periport_fib = bool(re.search(r'\b(?:periportal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?periportal)\b', line))
+#             bridg_fib = bool(re.search(r'\b(?:bridging\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?bridging)\b', line))
+#             cent_fib = bool(re.search(r'\b(?:central\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?central)\b', line))
+#             sept_fib = bool(re.search(r'\b(?:septal\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?septal)\b', line))
+#             periven_fib = bool(re.search(r'\b(?:perivenular\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?perivenular)\b', line))
+#             pericel_fib = bool(re.search(r'\b(?:pericellular\W+(?:\w+\W+){0,4}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?pericellular)\b', line))
             centrilob_fib = bool(re.search(r'\b(?:centrilobular\W+(?:\w+\W+){0,2}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?centrilobular)\b', line))
+            porttract_fib = bool(re.search(r'\b(?:portaltract\W+(?:\w+\W+){0,2}?fibrosis|fibrosis\W+(?:\w+\W+){0,3}?portaltract)\b', line))
 
+            port_fib1 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,3}?fibrosis|fibrosis\W+(?:\w+\W+){0,2}?portal)\b', line))
+            port_fib2 = bool(re.search(r'\b(?:fibrous\W+(?:\w+\W+){0,3}?portal)\b', line))
+            
+            port_exp_1 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,2}?expanded|expanded\W+(?:\w+\W+){0,1}?portal)\b', line))
+            port_exp_2 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,1}?expansion|expansion\W+(?:\w+\W+){0,2}?portal)\b', line))
+            port_exp = port_exp_1 or port_exp_2
+            
+            periport_exp_1 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,2}?expanded|expanded\W+(?:\w+\W+){0,1}?portal)\b', line))
+            periport_exp_2 = bool(re.search(r'\b(?:portal\W+(?:\w+\W+){0,1}?expansion|expansion\W+(?:\w+\W+){0,2}?portal)\b', line))
+            periport_exp = periport_exp_1 or periport_exp_2
+            
             
             if 'steatosis' in line and ('<5%' in line or 'less than 5%' in line) and 'steatosis' in e_text: #('5-33%' not in line)
                 e_text = '<5% ' + e_text
@@ -1734,7 +1779,7 @@ def entity_recognition_liver(text, nlp):
             if 'inflammation' in e_text and not 'portal' in e_text and not 'lobular' in e_text and not 'portal inflammation' in line and port_inf and inf_count>1:
                 e_text = 'portal ' + e_text
             
-            if ('portaltract' in line or 'portalarea' in line) and 'inflammation' in e_text and not 'portal' in e_text  and (port_inf or port_tract_inf):
+            if ('portaltract' in line or 'portal area' in line) and 'inflammation' in e_text and not 'portal' in e_text  and (port_inf or port_tract_inf):
                 e_text = 'portal ' + e_text
                 
             if 'lobular' in line and 'activity' in e_text and not 'lobular' in e_text and lobu_act:
@@ -1772,8 +1817,37 @@ def entity_recognition_liver(text, nlp):
             if 'scarring' in e_text and port_scar and not 'portal' in e_text:
                 e_text = 'portal ' + e_text
                 
-            if 'infiltrate' in e_text and lobu_infil and not 'lobular' in e_text:
+            if 'infiltrate' in e_text and lobu_infil and not 'lobul' in e_text:
                 e_text = 'lobular ' + e_text
+                
+            if 'fibrosis' in e_text and (port_fib1 or porttract_fib) and not 'portal' in e_text:
+                e_text = e_text + ' (portal-fibrosis)'
+                
+            if 'fibrous' in e_text and port_fib2:
+                e_text = e_text + ' (portal-fibrosis)'
+                
+            if 'expan' in e_text and (port_exp or periport_exp):
+                e_text = e_text + ' (portal-fibrosis)'
+            
+            if 'brunt' in e_text and not 'fibrosis' in line:
+                e_text = e_text + ' (fibrosis)'
+                
+            if 'fibrosis' in e_text:
+                if 'pericellular' in line and not 'pericellular' in e_text:
+                    e_text = e_text + ' (pericellular-fibrosis)'
+                if 'sinusoidal' in line and not 'sinusoidal' in e_text:
+                    e_text = e_text + ' (sinusoidal-fibrosis)'
+                if 'periportal' in line and not 'periportal' in e_text:
+                    e_text = e_text + ' (periportal-fibrosis)'
+                if 'central' in line and not 'central' in e_text:
+                    e_text = e_text + ' (central-fibrosis)'
+                if 'septal' in line and not 'septal' in e_text:
+                    e_text = e_text + ' (septal-fibrosis)'
+                if 'ductal' in line and not 'ductal' in e_text:
+                    e_text = e_text + ' (ductal-fibrosis)'
+                if 'perivenular' in line and not 'perivenular' in e_text:
+                    e_text = e_text + ' (perivenular-fibrosis)'
+                
             
             
 #             if 'fibrosis' in e_text:
@@ -1782,8 +1856,8 @@ def entity_recognition_liver(text, nlp):
 #                     e_text = e_text + ' sinusoidal'
 #                 if 'perisinusoidal' in line and 'perisinusoidal' not in e_text and perisin_fib:
 #                     e_text = e_text + ' perisinusoidal'
-#                 if 'peri-portal' in line and 'peri-portal' not in e_text and periport_fib:
-#                     e_text = e_text + ' peri-portal'
+#                 if 'periportal' in line and 'periportal' not in e_text and periport_fib:
+#                     e_text = e_text + ' periportal'
 #                 if 'portal' in line and 'portal' not in e_text and port_fib:
 #                     e_text = e_text + ' portal'
 #                 if 'bridging' in line and 'bridging' not in e_text and bridg_fib:
@@ -1801,18 +1875,26 @@ def entity_recognition_liver(text, nlp):
             if ('fibrosis' in e_text or 'bridging' in e_text or 'cirrhosis' in e_text) and 'stage' in line:
                 
                 line = (line
+                        .replace('stage i-ii', 'stage 1-2').replace('stage ii-iii', 'stage 2-3')
+                        .replace('stage iii-iv', 'stage 3-4').replace('stage iv-v', 'stage 4-5')
+                        .replace('stage v-vi', 'stage 5-6')
+                        
                         .replace('stage iii', 'stage 3').replace('stage ii', 'stage 2').replace('stage iv', 'stage 4')
                         .replace('stage vi', 'stage 6').replace('stage v', 'stage 5').replace('stage i', 'stage 1')
                         
+                        .replace('1/2', '1-2').replace('2/3', '2-3').replace('3/4 of 4', '3-4 of 4')
                         .replace('0 to 1', '0-1').replace('1 to 2', '1-2').replace('2 to 3', '2-3')
                         .replace('3 to 4', '3-4').replace('4 to 5', '4-5').replace('5 to 6', '5-6')
+                        .replace('0 to focally 1', '0-1').replace('1 to focally 2', '1-2')
+                        .replace('2 to focally 3', '2-3').replace('3 to focally 4', '3-4')
+                        .replace('4 to focally 5', '4-5').replace('5 to focally 6', '5-6')
                         .replace('0-1', '0.5').replace('1-2', '1.5').replace('2-3', '2.5')
                         .replace('3-4', '3.5').replace('4-5', '4.5').replace('5-6', '5.5')
                         .replace('1b-2', '1.5')
                         .replace(' 1a ', ' 1 ').replace(' 2a ', ' 2 ').replace(' 3a ', ' 3 ')
                         .replace(' 4a ', ' 4 ').replace(' 5a ', ' 5 ').replace(' 6a ', ' 6 ')
                    )
-        
+                        
                 stagelist_1 = re.findall(r'stage.*?(\d+(?:\.\d+)?).*?(\d+(?:\.\d+)?)', line)
                 stagelist_2 = re.findall(r'stage.*?(\d+(?:\.\d+)?)', line)
                 
@@ -1862,6 +1944,7 @@ def entity_recognition_liver(text, nlp):
             entity_result = entity_result + e_text + ' ' + str(not e_bool) + '\n'
             
             entity_result = entity_result.replace('baloon', 'balloon').replace('ballon', 'balloon').replace('balon', 'balloon')
-    
+            
+#         print(line)
         
     return entity_result
