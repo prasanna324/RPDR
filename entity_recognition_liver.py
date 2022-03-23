@@ -118,7 +118,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
         # extract path report for this entry
         disease_list = []
         report_text = df_path.iloc[i,:].Report_Text
-        result_text = entity_recognition_liver(report_text, nlp=nlp_2)
+        result_text = entities(report_text, nlp=nlp_2)
 
         steatosis = np.nan
         ballooning = np.nan
@@ -555,7 +555,7 @@ def is_liver_disease(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', up
     return return_df
 
 
-def entity_recognition_liver(text, nlp):
+def entities(text, nlp):
     
     import re
     
@@ -926,29 +926,6 @@ def entity_recognition_liver(text, nlp):
                 if 'perivenular' in line and not 'perivenular' in e_text:
                     e_text = e_text + ' (perivenular-fibrosis)'
                 
-            
-            
-#             if 'fibrosis' in e_text:
-            
-#                 if 'sinusoidal' in line and 'sinusoidal' not in e_text and sin_fib:
-#                     e_text = e_text + ' sinusoidal'
-#                 if 'perisinusoidal' in line and 'perisinusoidal' not in e_text and perisin_fib:
-#                     e_text = e_text + ' perisinusoidal'
-#                 if 'periportal' in line and 'periportal' not in e_text and periport_fib:
-#                     e_text = e_text + ' periportal'
-#                 if 'portal' in line and 'portal' not in e_text and port_fib:
-#                     e_text = e_text + ' portal'
-#                 if 'bridging' in line and 'bridging' not in e_text and bridg_fib:
-#                     e_text = e_text + ' bridging'
-#                 if 'central' in line and 'central' not in e_text and cent_fib:
-#                     e_text = e_text + ' central'
-#                 if 'septal' in line and 'septal' not in e_text and sept_fib:
-#                     e_text = e_text + ' septal'
-#                 if 'perivenular' in line and 'perivenular' not in e_text and periven_fib:
-#                     e_text = e_text + ' perivenular'
-#                 if 'pericellular' in line and 'pericellular' not in e_text and pericel_fib:
-#                     e_text = e_text + ' pericellular'
-            
            
             if ('fibrosis' in e_text or 'bridging' in e_text or 'cirrhosis' in e_text) and 'stage' in line:
                 

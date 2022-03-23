@@ -127,7 +127,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
         # extract path report for this entry
         disease_list = []
         report_text = df_path.iloc[i,:].Report_Text
-        result_text = entity_recognition_colon(report_text, nlp=nlp_2)
+        result_text = entities(report_text, nlp=nlp_2)
         
         erythema = np.nan
         marked_erythema = np.nan
@@ -607,7 +607,7 @@ def is_colitis(pathdf, corpus='en_core_sci_lg', term_set='en_clinical', update=T
     return return_df
 
 
-def entity_recognition_colon(text, nlp):
+def entities(text, nlp):
     
     import re
     import numpy as np
